@@ -1,15 +1,13 @@
 # Student Tracker
 
-Простое приложение для записи оценок студентов в CSV файл. Работает с обычным nginx + PHP (без OpenResty).
+Простое приложение для записи оценок студентов в CSV файл. Работает с OpenResty (nginx + Lua).
 
 ## Структура
 
 ```
 ├── index.html              # Приложение (HTML + CSS + JS)
 ├── server/
-│   ├── api/
-│   │   └── submit.php      # PHP скрипт для записи в CSV
-│   └── nginx-php.conf      # Конфигурация nginx
+│   └── nginx.conf          # Конфигурация OpenResty
 └── README.md
 ```
 
@@ -21,52 +19,59 @@
 npm run build
 ```
 
-### 2. Копирование файлов
+### 2. Установка OpenResty
+
+```bash
+# Ubuntu/Debian
+wget -O - https://openresty.org/package/pubkey.gpg | sudo apt-key add -
+echo "deb http://openresty.org/package/ubuntu $(lsb_release -sc) main" | sudo tee /etc/apt/sources.list.d/openresty.list
+sudo apt-get update
+sudo apt-get install -y openresty
+```
+
+### 3. Копирование файлов
 
 ```bash
 # Создаём директорию
-ssh user@194.87.103.77 "mkdir -p /var/www/html/results/api"
+ssh user@194.87.103.77 "sudo mkdir -p /var/www/html/results"
 
 # Копируем index.html
 scp dist/index.html user@194.87.103.77:/var/www/html/results/
 
-# Копируем PHP скрипт
-scp server/api/submit.php user@194.87.103.77:/var/www/html/results/api/
-
 # Копируем конфигурацию nginx
-scp server/nginx-php.conf user@194.87.103.77:/tmp/student-tracker.conf
+scp server/nginx.conf user@194.87.103.77:/tmp/student-tracker.conf
 ```
 
-### 3. Настройка nginx
+### 4. Настройка OpenResty
 
 ```bash
 # На сервере
 ssh user@194.87.103.77
 
 # Копируем конфигурацию
-sudo cp /tmp/student-tracker.conf /etc/nginx/conf.d/
+sudo cp /tmp/student-tracker.conf /usr/local/openresty/nginx/conf/nginx.conf
+
+# Или включаем как сайт:
+sudo cp /tmp/student-tracker.conf /usr/local/openresty/nginx/conf/sites-enabled/student-tracker.conf
 
 # Проверяем конфигурацию
-sudo nginx -t
+sudo /usr/local/openresty/bin/openresty -t
 
-# Перезапускаем nginx
-sudo systemctl reload nginx
+# Перезапускаем OpenResty
+sudo systemctl reload openresty
 ```
 
-### 4. Права доступа
+### 5. Права доступа
 
 ```bash
 # Даём права на запись в директорию
+sudo chown -R nobody:nogroup /var/www/html/results
 sudo chmod 755 /var/www/html/results
-sudo chmod 755 /var/www/html/results/api
-
-# PHP должен иметь право создавать файлы
-sudo chown -R www-www-data:www-data /var/www/html/results
 ```
 
 ## Использование
 
-1. Откройте `http://194.87.103.77/results/` в браузере
+1. Откройте `http://194.87.103.77/` в браузере
 2. Введите ИД студента (или отсканируйте QR-код)
 3. Введите название активности
 4. Выберите оценку (0-5)
@@ -85,8 +90,7 @@ Student ID,Activity,Grade,Comment,Date/Time
 
 ## Требования
 
-- Nginx
-- PHP-FPM (обычно уже установлен на хостинге)
+- OpenResty (nginx + Lua модуль)
 - Права на запись в директорию `/var/www/html/results/`
 
 ## Проверка работы
@@ -98,37 +102,31 @@ ls -la /var/www/html/results/archive.csv
 # Посмотрите содержимое
 cat /var/www/html/results/archive.csv
 
-# Проверьте логи nginx
-sudo tail -f /var/log/nginx/error.log
+# Проверьте логи OpenResty
+sudo tail -f /usr/local/openresty/nginx/logs/error.log
 ```
 
 ## Troubleshooting
 
 **Ошибка 403 Forbidden:**
 ```bash
-sudo chown -R www-www-data:www-data /var/www/html/results
-sudo chmod -R 755 /var/www/html/results
+sudo chown -R nobody:nogroup /var/www/html/results
+sudo chmod 755 /var/www/html/results
 ```
 
 **Ошибка 500 Internal Server Error:**
 ```bash
 # Проверьте логи
-sudo tail -f /var/log/nginx/error.log
-sudo tail -f /var/log/php-fpm.log
+sudo tail -f /usr/local/openresty/nginx/logs/error.log
 
-# Убедитесь что PHP-FPM запущен
-sudo systemctl status php-fpm
+# Убедитесь что OpenResty запущен
+sudo systemctl status openresty
 ```
 
-**PHP не выполняется:**
+**Lua модуль не загружен:**
 ```bash
-# Проверьте конфигурацию nginx
-sudo nginx -t
+# Проверьте что OpenResty установлен правильно
+/usr/local/openresty/bin/openresty -V
 
-# Убедитесь что fastcgi_pass указывает на правильный сокет
-# Путь может быть:
-# - /var/run/php/php-fpm.sock
-# - /var/run/php/php7.4-fpm.sock
-# - /var/run/php/php8.0-fpm.sock
-# - 127.0.0.1:9000
+# Должен содержать: --with-luajit
 ```
