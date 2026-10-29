@@ -1,261 +1,65 @@
-# Student Grade Tracker
+# Student Tracker
 
-Приложение для учёта оценок и активностей студентов. Чистый JavaScript, без серверной части. Nginx с Lua-модулем напрямую записывает данные в CSV файл.
+Простое приложение для записи оценок студентов в CSV файл.
 
-## 🚀 Возможности
+## Установка
 
-- **Форма ввода**: ИД студента, активность, оценка (0-5), комментарий, дата/время, URL файла
-- **QR-сканирование**: Через камеру устройства (html5-qrcode)
-- **QR-генерация**: Создание QR-кодов для студентов (qrcode.js)
-- **Шифрование**: XOR + Base64 перед отправкой на сервер
-- **CSV хранение**: Nginx + Lua записывает напрямую в CSV файл
-- **Без серверной части**: Не нужен Node.js, Python или PHP
-- **Адаптивный дизайн**: Работает на мобильных и десктопных устройствах
-
-## 📦 Установка
-
-### 1. Сборка фронтенда
+### 1. Сборка
 
 ```bash
 npm install
 npm run build
-
-# Файлы будут в папке dist/
-# Скопируйте на сервер:
-sudo cp -r dist/* /var/www/student-tracker/
 ```
 
 ### 2. Деплой на сервер 194.87.103.77
 
-#### Вариант A: PHP (рекомендуется для Apache)
-
 ```bash
-# Скопируйте файлы на сервер
-scp -r dist/* user@194.87.103.77:/var/www/html/results/
-scp server/api/submit.php user@194.87.103.77:/var/www/html/results/api/
-scp server/.htaccess user@194.87.103.77:/var/www/html/results/
+# Скопируйте index.html на сервер
+scp dist/index.html user@194.87.103.77:/var/www/html/results/
 
-# Создайте директорию для CSV
-ssh user@194.87.103.77 "mkdir -p /var/www/html/results/data && chmod 755 /var/www/html/results/data"
-
-# Установите права
-ssh user@194.87.103.77 "chown -R www-data:www-data /var/www/html/results/data"
+# Создайте директорию и установите права
+ssh user@194.87.103.77 "mkdir -p /var/www/html/results && chmod 755 /var/www/html/results"
 ```
 
-#### Вариант B: Nginx + Lua (OpenResty)
+### 3. Настройка nginx
 
 ```bash
-# Установите OpenResty
-wget -O - https://openresty.org/package/pubkey.gpg | sudo apt-key add -
-echo "deb http://openresty.org/package/ubuntu $(lsb_release -sc) main" | sudo tee /etc/apt/sources.list.d/openresty.list
-sudo apt-get update
-sudo apt-get install -y openresty
-
-# Скопируйте файлы
-sudo cp -r dist/* /var/www/student-tracker/
-sudo cp server/nginx-lua.conf /etc/openresty/nginx.conf
-
-# Создайте директорию для CSV
-sudo mkdir -p /var/www/student-tracker/data
-sudo chown -R www-data:www-data /var/www/student-tracker/data
+# Скопируйте конфигурацию
+sudo cp server/nginx-simple.conf /etc/nginx/conf.d/student-tracker.conf
 
 # Проверьте и перезапустите
-sudo openresty -t
-sudo systemctl reload openresty
+sudo nginx -t
+sudo systemctl reload nginx
 ```
 
-### 3. Настройка в приложении
-
-1. Откройте приложение в браузере
-2. Нажмите ⚙️ (настройки)
-3. Укажите:
-   - **URL сервера**: `http://194.87.103.77/results/`
-   - **Имя CSV файла**: например `students.csv` (или оставьте пустым для `archive.csv`)
-4. Нажмите "Сохранить"
-
-### 4. SSL сертификат (опционально)
+### 4. Создайте файл archive.csv
 
 ```bash
-# Self-signed для тестирования
-sudo openssl req -x509 -nodes -days 365 -newkey rsa:2048 \
-  -keyout /etc/ssl/private/student-tracker.key \
-  -out /etc/ssl/certs/student-tracker.crt
-
-# Или Let's Encrypt
-sudo certbot --nginx -d your-domain.com
+# На сервере
+sudo touch /var/www/html/results/archive.csv
+sudo chmod 666 /var/www/html/results/archive.csv
+echo "Student ID,Activity,Grade,Comment,Date/Time" | sudo tee /var/www/html/results/archive.csv
 ```
 
-## 🔐 Безопасность
+## Использование
 
-### Шифрование
-- Данные шифруются XOR с ключом + Base64 на клиенте
-- Ключ должен совпадать в `public/js/crypto.js` и `nginx-lua.conf`
-- Каждый запрос содержит временный токен (24 часа)
+1. Откройте `http://194.87.103.77/results/` в браузере
+2. Введите ИД студента (или отсканируйте QR-код)
+3. Введите название активности
+4. Выберите оценку (0-5)
+5. Добавьте комментарий (опционально)
+6. Нажмите "Отправить"
 
-### Серверная защита
-- SSL/TLS (HTTPS)
-- Rate limiting (5 запросов/сек)
-- CORS заголовки
-- Валидация токенов через Lua
-- Безопасные HTTP заголовки
+Данные автоматически записываются в файл `archive.csv` на сервере.
 
-### ⚠️ Важно!
-- **Смените ключ шифрования** в `public/js/crypto.js` и `server/nginx-lua.conf`
-- Используйте настоящие SSL сертификаты для продакшена
-- Настройте firewall
-
-## 📱 Использование через URL
-
-После развёртывания:
-```
-https://your-domain.com
-```
-
-На мобильных можно добавить на рабочий стол.
-
-## 🔌 Интеграция в другие приложения
-
-Приложение можно встроить в другие HTML-страницы через iframe с гибкой настройкой полей.
-
-### Режимы работы
-
-**Standalone** (полноценное приложение):
-```
-https://your-domain.com
-```
-
-**Embed** (встраиваемый режим без header/footer):
-```
-https://your-domain.com?mode=embed
-```
-
-### Выбор полей
-
-URL-параметр `fields` определяет, какие поля показывать:
-
-```html
-<!-- Только ИД студента с QR -->
-<iframe src="index.html?mode=embed&fields=studentId"></iframe>
-
-<!-- ИД и оценка -->
-<iframe src="index.html?mode=embed&fields=studentId,grade"></iframe>
-
-<!-- Все поля -->
-<iframe src="index.html?mode=embed&fields=studentId,activity,grade,comment"></iframe>
-```
-
-**Доступные поля:**
-- `studentId` — ИД студента (с QR-сканированием)
-- `activity` — Название активности
-- `grade` — Оценка (0-5)
-- `comment` — Комментарий
-
-### Получение событий
-
-Приложение отправляет события через `postMessage` и `CustomEvent`:
-
-```javascript
-// Слушаем события от iframe
-window.addEventListener('message', function(event) {
-  if (event.data.type === 'studentRecordSaved') {
-    console.log('Запись сохранена:', event.data.record);
-    // event.data.record = { studentId, activity, grade, comment, dateTime, fileUrl }
-  }
-  
-  if (event.data.type === 'studentRecordError') {
-    console.error('Ошибка:', event.data.message);
-  }
-});
-```
-
-### Программное управление
-
-```javascript
-const iframe = document.getElementById('student-tracker-frame');
-
-// Установить ИД студента
-iframe.contentWindow.App.setStudentId('STU12345');
-
-// Получить все записи
-const records = iframe.contentWindow.App.getRecords();
-
-// Очистить записи
-iframe.contentWindow.App.clearRecords();
-
-// Изменить конфигурацию
-iframe.contentWindow.App.setConfig({
-  fields: ['studentId', 'grade'],
-  onSuccess: function(record) {
-    console.log('Сохранено:', record);
-  },
-  onError: function(message) {
-    console.error('Ошибка:', message);
-  }
-});
-```
-
-### Полный пример интеграции
-
-См. файл `public/embed-example.html` — демонстрационная страница с:
-- Встроенным приложением (только ИД студента)
-- Логом событий в реальном времени
-- Примерами кода
-
-Откройте `embed-example.html` в браузере для интерактивной демонстрации.
-
-## 📊 Формат CSV
-
-Файл создаётся автоматически при первой записи:
+## Формат CSV
 
 ```csv
 Student ID,Activity,Grade,Comment,Date/Time
-STU001,Лабораторная работа №1,5,Отличная работа,2024-01-15T10:30
-STU002,Курсовой проект,4,Хорошая работа,2024-01-15T11:00
+"STU001","Лабораторная работа","5","Отличная работа","2024-01-15T10:30:00.000Z"
 ```
 
-## 🛠 Технологии
+## Требования
 
-- **Frontend**: Чистый HTML/CSS/JavaScript (без фреймворков)
-- **QR**: html5-qrcode (сканирование), qrcode.js (генерация)
-- **Backend**: Nginx + Lua-nginx-module (OpenResty)
-- **Хранение**: CSV файлы на диске
-- **Сборка**: Vite (для минификации)
-
-## 📁 Структура
-
-```
-├── index.html              # Главная страница
-├── public/
-│   ├── css/
-│   │   └── style.css       # Стили приложения
-│   └── js/
-│       ├── crypto.js       # Модуль шифрования
-│       └── app.js          # Основная логика
-├── src/
-│   ├── main.tsx            # Entry point для Vite
-│   └── index.css           # Tailwind импорт
-├── server/
-│   └── nginx-lua.conf      # Конфигурация nginx + Lua
-└── data/                   # CSV файлы (на сервере)
-    └── records.csv         # Автоматически создаётся
-```
-
-## 🔄 Как это работает
-
-1. Пользователь заполняет форму в браузере
-2. Данные шифруются (XOR + Base64) на клиенте
-3. Отправляются через POST на `/api/submit`
-4. Nginx принимает запрос, Lua скрипт:
-   - Проверяет токен
-   - Дешифрует данные
-   - Записывает CSV строку в файл
-5. Если файла нет — создаётся новый с заголовком
-6. Если файл есть — запись добавляется в конец
-
-## ⚙️ Переменные
-
-| Переменная | Где | Описание |
-|-----------|-----|----------|
-| `ENCRYPTION_KEY` | crypto.js, nginx-lua.conf | Ключ шифрования |
-| `csv_file` | nginx-lua.conf | Путь к CSV файлу |
-| `serverUrl` | localStorage | URL сервера (настраивается в UI) |
+- Nginx с модулем lua-nginx-module (OpenResty)
+- Права на запись в директорию `/var/www/html/results/`
