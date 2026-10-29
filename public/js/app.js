@@ -9,7 +9,7 @@ const App = (function() {
   let selectedGrade = '';
   let html5QrCode = null;
   let config = {
-    fields: ['studentId', 'activity', 'grade', 'comment', 'fileUrl'],
+    fields: ['studentId', 'activity', 'grade', 'comment'],
     mode: 'standalone', // 'standalone' | 'embed'
     onSuccess: null,
     onError: null
@@ -60,7 +60,6 @@ const App = (function() {
     elements.studentId = document.getElementById('student-id');
     elements.activity = document.getElementById('activity');
     elements.comment = document.getElementById('comment');
-    elements.fileUrl = document.getElementById('file-url');
     elements.btnSubmit = document.getElementById('btn-submit');
     elements.resultMessage = document.getElementById('result-message');
     
@@ -105,8 +104,7 @@ const App = (function() {
       studentId: '[data-field="studentId"]',
       activity: '[data-field="activity"]',
       grade: '[data-field="grade"]',
-      comment: '[data-field="comment"]',
-      fileUrl: '[data-field="fileUrl"]'
+      comment: '[data-field="comment"]'
     };
 
     // Hide all fields first
@@ -245,7 +243,6 @@ const App = (function() {
     const activity = elements.activity ? elements.activity.value.trim() : '';
     const grade = selectedGrade;
     const comment = elements.comment ? elements.comment.value.trim() : '';
-    const fileUrl = elements.fileUrl ? elements.fileUrl.value.trim() : '';
     const dateTime = new Date().toISOString(); // Always current time
 
     // Validation
@@ -267,7 +264,7 @@ const App = (function() {
     elements.btnSubmit.querySelector('span').textContent = 'Отправка...';
     elements.btnSubmit.querySelector('i').className = 'fas fa-spinner fa-spin';
 
-    const record = { studentId, activity, grade, comment, dateTime, fileUrl };
+    const record = { studentId, activity, grade, comment, dateTime };
 
     // Send to server
     submitToServer(record)
@@ -369,8 +366,7 @@ const App = (function() {
       CryptoModule.escapeCSV(record.activity),
       CryptoModule.escapeCSV(record.grade),
       CryptoModule.escapeCSV(record.comment),
-      CryptoModule.escapeCSV(record.dateTime),
-      CryptoModule.escapeCSV(record.fileUrl)
+      CryptoModule.escapeCSV(record.dateTime)
     ].join(',');
 
     // Encrypt data
@@ -618,7 +614,7 @@ const App = (function() {
   function exportCSV() {
     if (records.length === 0) return;
     
-    const headers = ['Student ID', 'Activity', 'Grade', 'Comment', 'Date/Time', 'File URL'];
+    const headers = ['Student ID', 'Activity', 'Grade', 'Comment', 'Date/Time'];
     const csvContent = [
       headers.join(','),
       ...records.map(r => [
@@ -626,8 +622,7 @@ const App = (function() {
         CryptoModule.escapeCSV(r.activity),
         CryptoModule.escapeCSV(r.grade),
         CryptoModule.escapeCSV(r.comment),
-        CryptoModule.escapeCSV(r.dateTime),
-        CryptoModule.escapeCSV(r.fileUrl)
+        CryptoModule.escapeCSV(r.dateTime)
       ].join(','))
     ].join('\n');
 
@@ -674,7 +669,6 @@ const App = (function() {
     if (elements.studentId) elements.studentId.value = '';
     if (elements.activity) elements.activity.value = '';
     if (elements.comment) elements.comment.value = '';
-    if (elements.fileUrl) elements.fileUrl.value = '';
     selectedGrade = '';
     elements.gradeButtons.forEach(b => b.classList.remove('active'));
   }

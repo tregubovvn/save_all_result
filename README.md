@@ -141,7 +141,7 @@ URL-параметр `fields` определяет, какие поля пока
 <iframe src="index.html?mode=embed&fields=studentId,grade"></iframe>
 
 <!-- Все поля -->
-<iframe src="index.html?mode=embed&fields=studentId,activity,grade,comment,fileUrl"></iframe>
+<iframe src="index.html?mode=embed&fields=studentId,activity,grade,comment"></iframe>
 ```
 
 **Доступные поля:**
@@ -149,7 +149,6 @@ URL-параметр `fields` определяет, какие поля пока
 - `activity` — Название активности
 - `grade` — Оценка (0-5)
 - `comment` — Комментарий
-- `fileUrl` — URL файла
 
 ### Получение событий
 
@@ -209,9 +208,9 @@ iframe.contentWindow.App.setConfig({
 Файл создаётся автоматически при первой записи:
 
 ```csv
-Student ID,Activity,Grade,Comment,Date/Time,File URL
-STU001,Лабораторная работа №1,5,Отличная работа,2024-01-15T10:30,https://files.example.com/lab1.pdf
-STU002,Курсовой проект,4,Хорошая работа,2024-01-15T11:00,
+Student ID,Activity,Grade,Comment,Date/Time
+STU001,Лабораторная работа №1,5,Отличная работа,2024-01-15T10:30
+STU002,Курсовой проект,4,Хорошая работа,2024-01-15T11:00
 ```
 
 ## 🛠 Технологии

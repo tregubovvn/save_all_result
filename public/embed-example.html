@@ -285,7 +285,7 @@
 
 <span class="comment">&lt;!-- Все поля --&gt;</span>
 <span class="keyword">&lt;iframe</span> 
-  <span class="string">src</span>=<span class="string">"index.html?mode=embed&fields=studentId,activity,grade,comment,fileUrl"</span>
+  <span class="string">src</span>=<span class="string">"index.html?mode=embed&fields=studentId,activity,grade,comment"</span>
 <span class="keyword">&gt;&lt;/iframe&gt;</span></pre>
       </div>
 
@@ -297,7 +297,7 @@
   <span class="keyword">if</span> (event.data.type === <span class="string">'studentRecordSaved'</span>) {
     console.<span class="function">log</span>(<span class="string">'Запись сохранена:'</span>, event.data.record);
     <span class="comment">// event.data.record содержит:</span>
-    <span class="comment">// { studentId, activity, grade, comment, dateTime, fileUrl }</span>
+    <span class="comment">// { studentId, activity, grade, comment, dateTime }</span>
   }
   
   <span class="keyword">if</span> (event.data.type === <span class="string">'studentRecordError'</span>) {
@@ -340,13 +340,12 @@ iframe.contentWindow.App.<span class="function">setConfig</span>({
 <span class="string">activity</span>   - Название активности
 <span class="string">grade</span>      - Оценка (0-5)
 <span class="string">comment</span>    - Комментарий
-<span class="string">fileUrl</span>    - URL файла
 
 <span class="comment">// Примеры комбинаций:</span>
 <span class="string">fields=studentId</span>                          <span class="comment">// Только ИД</span>
 <span class="string">fields=studentId,grade</span>                    <span class="comment">// ИД и оценка</span>
 <span class="string">fields=studentId,activity,grade</span>           <span class="comment">// ИД, активность, оценка</span>
-<span class="string">fields=studentId,activity,grade,comment,fileUrl</span>  <span class="comment">// Все поля</span></pre>
+<span class="string">fields=studentId,activity,grade,comment</span>   <span class="comment">// Все поля</span></pre>
       </div>
     </div>
   </div>

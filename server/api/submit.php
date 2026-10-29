@@ -107,7 +107,7 @@ if (!$decrypted) {
 
 // Создаём файл с заголовком если его нет
 if (!file_exists($csv_file)) {
-    file_put_contents($csv_file, "Student ID,Activity,Grade,Comment,Date/Time,File URL\n");
+    file_put_contents($csv_file, "Student ID,Activity,Grade,Comment,Date/Time\n");
 }
 
 // Добавляем запись
