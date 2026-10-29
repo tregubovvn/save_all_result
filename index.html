@@ -1,278 +1,284 @@
 <!DOCTYPE html>
 <html lang="ru">
 <head>
-  <meta charset="UTF-8" />
-  <meta name="viewport" content="width=device-width, initial-scale=1.0" />
-  <title>Student Grade Tracker</title>
-  <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.4.0/css/all.min.css" />
-  <script src="https://unpkg.com/html5-qrcode@2.3.8/html5-qrcode.min.js"></script>
-  <script src="https://cdn.jsdelivr.net/npm/qrcodejs@1.0.0/qrcode.min.js"></script>
-  <link rel="stylesheet" href="/css/style.css" />
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>Student Tracker</title>
+  <style>
+    * { margin: 0; padding: 0; box-sizing: border-box; }
+    body {
+      font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, sans-serif;
+      background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
+      min-height: 100vh;
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      padding: 20px;
+    }
+    .container {
+      background: white;
+      border-radius: 20px;
+      padding: 40px;
+      max-width: 500px;
+      width: 100%;
+      box-shadow: 0 20px 60px rgba(0,0,0,0.3);
+    }
+    h1 {
+      color: #333;
+      margin-bottom: 30px;
+      text-align: center;
+      font-size: 28px;
+    }
+    .form-group {
+      margin-bottom: 20px;
+    }
+    label {
+      display: block;
+      margin-bottom: 8px;
+      color: #555;
+      font-weight: 600;
+      font-size: 14px;
+    }
+    input, textarea {
+      width: 100%;
+      padding: 12px 16px;
+      border: 2px solid #e0e0e0;
+      border-radius: 10px;
+      font-size: 15px;
+      transition: border-color 0.3s;
+    }
+    input:focus, textarea:focus {
+      outline: none;
+      border-color: #667eea;
+    }
+    textarea {
+      resize: vertical;
+      min-height: 80px;
+    }
+    .grades {
+      display: flex;
+      gap: 10px;
+      flex-wrap: wrap;
+    }
+    .grade-btn {
+      flex: 1;
+      min-width: 60px;
+      padding: 12px;
+      border: 2px solid #e0e0e0;
+      border-radius: 10px;
+      background: white;
+      font-size: 18px;
+      font-weight: 600;
+      cursor: pointer;
+      transition: all 0.3s;
+    }
+    .grade-btn:hover {
+      border-color: #667eea;
+      transform: translateY(-2px);
+    }
+    .grade-btn.active {
+      background: #667eea;
+      color: white;
+      border-color: #667eea;
+    }
+    .qr-buttons {
+      display: flex;
+      gap: 10px;
+    }
+    .qr-buttons input {
+      flex: 1;
+    }
+    .qr-btn {
+      padding: 12px 20px;
+      border: none;
+      border-radius: 10px;
+      background: #667eea;
+      color: white;
+      font-size: 16px;
+      cursor: pointer;
+      transition: all 0.3s;
+    }
+    .qr-btn:hover {
+      background: #5568d3;
+      transform: translateY(-2px);
+    }
+    .submit-btn {
+      width: 100%;
+      padding: 16px;
+      border: none;
+      border-radius: 10px;
+      background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
+      color: white;
+      font-size: 18px;
+      font-weight: 600;
+      cursor: pointer;
+      transition: all 0.3s;
+      margin-top: 10px;
+    }
+    .submit-btn:hover {
+      transform: translateY(-2px);
+      box-shadow: 0 10px 30px rgba(102, 126, 234, 0.4);
+    }
+    .submit-btn:disabled {
+      opacity: 0.6;
+      cursor: not-allowed;
+      transform: none;
+    }
+    .message {
+      padding: 15px;
+      border-radius: 10px;
+      margin-top: 20px;
+      text-align: center;
+      font-weight: 600;
+      display: none;
+    }
+    .message.success {
+      background: #d4edda;
+      color: #155724;
+      display: block;
+    }
+    .message.error {
+      background: #f8d7da;
+      color: #721c24;
+      display: block;
+    }
+  </style>
 </head>
 <body>
-  <div id="app">
-    <!-- Header -->
-    <header class="header">
-      <div class="header-inner">
-        <div class="header-brand">
-          <div class="header-icon">
-            <i class="fas fa-graduation-cap"></i>
-          </div>
-          <div>
-            <h1>Student Tracker</h1>
-            <p>Учёт оценок и активностей</p>
-          </div>
-        </div>
-        <div class="header-actions">
-          <button id="btn-settings" class="icon-btn" title="Настройки">
-            <i class="fas fa-cog"></i>
-          </button>
-          <button id="btn-history" class="icon-btn" title="История">
-            <i class="fas fa-list"></i>
-            <span id="records-count" class="badge hidden">0</span>
-          </button>
-        </div>
-      </div>
-    </header>
-
-    <main class="main">
-      <!-- Settings Panel -->
-      <div id="settings-panel" class="panel hidden">
-        <h3><i class="fas fa-server"></i> Настройки сервера</h3>
-        <div class="form-group">
-          <label>URL сервера</label>
-          <input type="url" id="server-url" placeholder="http://194.87.103.77/results/" value="http://194.87.103.77/results/" />
-        </div>
-        <div class="form-group">
-          <label><i class="fas fa-file-csv"></i> Имя CSV файла</label>
-          <input type="text" id="csv-filename" placeholder="archive.csv" />
-          <small style="color: var(--text-muted); font-size: 12px; margin-top: 4px; display: block;">
-            Если не указать, будет использоваться <code style="background: rgba(255,255,255,0.1); padding: 2px 6px; border-radius: 4px;">archive.csv</code>
-          </small>
-        </div>
-        <button id="btn-save-settings" class="btn btn-primary">Сохранить</button>
-      </div>
-
-      <!-- Main Form -->
-      <div class="form-card">
-        <form id="grade-form">
-          <!-- Student ID -->
-          <div class="form-group" data-field="studentId">
-            <label><i class="fas fa-id-card"></i> ИД Студента <span class="required">*</span></label>
-            <div class="input-with-buttons">
-              <input type="text" id="student-id" placeholder="Введите или отсканируйте QR" required />
-              <button type="button" id="btn-scan-qr" class="btn btn-qr" title="Сканировать QR">
-                <i class="fas fa-qrcode"></i>
-              </button>
-              <button type="button" id="btn-gen-qr" class="btn btn-qr-green" title="Сгенерировать QR">
-                <i class="fas fa-plus-circle"></i>
-              </button>
-            </div>
-          </div>
-
-          <!-- Activity -->
-          <div class="form-group" data-field="activity">
-            <label><i class="fas fa-book"></i> Название активности <span class="required">*</span></label>
-            <input type="text" id="activity" placeholder="Например: Лабораторная работа №1" required />
-          </div>
-
-          <!-- Grade -->
-          <div class="form-group" data-field="grade">
-            <label><i class="fas fa-star"></i> Оценка <span class="required">*</span></label>
-            <div class="grade-buttons">
-              <button type="button" class="grade-btn" data-grade="5">5</button>
-              <button type="button" class="grade-btn" data-grade="4">4</button>
-              <button type="button" class="grade-btn" data-grade="3">3</button>
-              <button type="button" class="grade-btn" data-grade="2">2</button>
-              <button type="button" class="grade-btn" data-grade="1">1</button>
-              <button type="button" class="grade-btn" data-grade="0">0</button>
-            </div>
-          </div>
-
-          <!-- Comment -->
-          <div class="form-group" data-field="comment">
-            <label><i class="fas fa-comment"></i> Комментарий</label>
-            <textarea id="comment" placeholder="Дополнительные заметки..." rows="3"></textarea>
-          </div>
-
-          <!-- File URL -->
-          <div class="form-group" data-field="fileUrl">
-            <label><i class="fas fa-link"></i> URL файла</label>
-            <input type="url" id="file-url" placeholder="https://..." />
-          </div>
-
-          <!-- Result Message -->
-          <div id="result-message" class="result-message hidden"></div>
-
-          <!-- Submit -->
-          <button type="submit" id="btn-submit" class="btn btn-submit">
-            <i class="fas fa-paper-plane"></i>
-            <span>Отправить</span>
-          </button>
-        </form>
-      </div>
-
-      <!-- History Panel -->
-      <div id="history-panel" class="panel hidden">
-        <div class="history-header">
-          <h3><i class="fas fa-history"></i> История записей (<span id="history-count">0</span>)</h3>
-          <button id="btn-export" class="btn btn-success btn-sm">
-            <i class="fas fa-download"></i> Экспорт CSV
-          </button>
-        </div>
-        <div id="records-list" class="records-list">
-          <div class="empty-state">
-            <i class="fas fa-inbox"></i>
-            <p>Нет записей</p>
-          </div>
+  <div class="container">
+    <h1>📚 Student Tracker</h1>
+    
+    <form id="form">
+      <div class="form-group">
+        <label>ИД Студента</label>
+        <div class="qr-buttons">
+          <input type="text" id="studentId" placeholder="Введите или сканируйте QR" required>
+          <button type="button" class="qr-btn" onclick="scanQR()">📷</button>
         </div>
       </div>
 
-      <!-- Info Cards -->
-      <div class="info-cards">
-        <div class="info-card">
-          <div class="info-icon info-icon-indigo">
-            <i class="fas fa-qrcode"></i>
-          </div>
-          <h4>QR-сканирование</h4>
-          <p>Сканируйте QR-код для быстрого ввода ИД студента</p>
-        </div>
-        <div class="info-card">
-          <div class="info-icon info-icon-emerald">
-            <i class="fas fa-lock"></i>
-          </div>
-          <h4>Шифрование</h4>
-          <p>Данные шифруются перед отправкой на сервер</p>
-        </div>
-        <div class="info-card">
-          <div class="info-icon info-icon-amber">
-            <i class="fas fa-file-csv"></i>
-          </div>
-          <h4>CSV формат</h4>
-          <p>Результаты сохраняются на сервере nginx в CSV</p>
+      <div class="form-group">
+        <label>Активность</label>
+        <input type="text" id="activity" placeholder="Например: Лабораторная работа" required>
+      </div>
+
+      <div class="form-group">
+        <label>Оценка</label>
+        <div class="grades">
+          <button type="button" class="grade-btn" data-grade="5">5</button>
+          <button type="button" class="grade-btn" data-grade="4">4</button>
+          <button type="button" class="grade-btn" data-grade="3">3</button>
+          <button type="button" class="grade-btn" data-grade="2">2</button>
+          <button type="button" class="grade-btn" data-grade="1">1</button>
+          <button type="button" class="grade-btn" data-grade="0">0</button>
         </div>
       </div>
 
-      <!-- Server Config Info -->
-      <div class="config-card">
-        <h3><i class="fas fa-info-circle"></i> Конфигурация nginx (Lua)</h3>
-        <pre class="config-code">
-# nginx.conf с Lua модулем для записи в CSV
-# Требуется: openresty или nginx + lua-nginx-module
+      <div class="form-group">
+        <label>Комментарий</label>
+        <textarea id="comment" placeholder="Дополнительные заметки..."></textarea>
+      </div>
 
-server {
-    listen 443 ssl http2;
-    server_name your-domain.com;
+      <button type="submit" class="submit-btn" id="submitBtn">Отправить</button>
+    </form>
 
-    ssl_certificate     /etc/ssl/certs/server.crt;
-    ssl_certificate_key /etc/ssl/private/server.key;
+    <div id="message" class="message"></div>
+  </div>
 
-    # API endpoint - запись в CSV через Lua
-    location /api/submit {
-        content_by_lua_block {
-            local csv_file = "/var/www/student-tracker/data/records.csv"
+  <script src="https://unpkg.com/html5-qrcode@2.3.8/html5-qrcode.min.js"></script>
+  <script>
+    let selectedGrade = '';
+    const SERVER_URL = 'http://194.87.103.77/results/api/submit';
 
-            -- Читаем тело запроса
-            ngx.req.read_body()
-            local body = ngx.req.get_body_data()
+    // Выбор оценки
+    document.querySelectorAll('.grade-btn').forEach(btn => {
+      btn.addEventListener('click', function() {
+        document.querySelectorAll('.grade-btn').forEach(b => b.classList.remove('active'));
+        this.classList.add('active');
+        selectedGrade = this.dataset.grade;
+      });
+    });
 
-            -- Проверяем токен
-            local token = ngx.req.get_headers()["x-request-token"]
-            if not token then
-                ngx.status = 401
-                ngx.say('{"success":false,"message":"No token"}')
-                return
-            end
-
-            -- Дешифруем данные (XOR + Base64)
-            local data = ngx.decode_base64(body)
-            -- XOR дешифрование выполняется на стороне Lua
-
-            -- Проверяем существование файла
-            local f = io.open(csv_file, "r")
-            if not f then
-                -- Создаём новый файл с заголовком
-                f = io.open(csv_file, "w")
-                f:write("Student ID,Activity,Grade,Comment,Date/Time,File URL\n")
-                f:close()
-            else
-                f:close()
-            end
-
-            -- Добавляем запись
-            f = io.open(csv_file, "a")
-            f:write(data .. "\n")
-            f:close()
-
-            ngx.header["Content-Type"] = "application/json"
-            ngx.header["Access-Control-Allow-Origin"] = "*"
-            ngx.say('{"success":true,"message":"Запись сохранена"}')
-        }
-
-        # CORS preflight
-        if ($request_method = 'OPTIONS') {
-            add_header 'Access-Control-Allow-Origin' '*';
-            add_header 'Access-Control-Allow-Methods' 'POST, OPTIONS';
-            add_header 'Access-Control-Allow-Headers' 'Content-Type, X-Request-Token';
-            return 204;
-        }
+    // QR сканирование
+    function scanQR() {
+      const html5QrCode = new Html5Qrcode("qr-reader");
+      html5QrCode.start(
+        { facingMode: "environment" },
+        { fps: 10, qrbox: { width: 250, height: 250 } },
+        (decodedText) => {
+          document.getElementById('studentId').value = decodedText;
+          html5QrCode.stop();
+          showMessage('ИД считан из QR-кода', 'success');
+        },
+        (errorMessage) => {}
+      ).catch(err => {
+        showMessage('Не удалось запустить камеру', 'error');
+      });
     }
 
-    # Статические файлы
-    location / {
-        root /var/www/student-tracker;
-        try_files $uri $uri/ /index.html;
+    // Отправка формы
+    document.getElementById('form').addEventListener('submit', async (e) => {
+      e.preventDefault();
+
+      if (!selectedGrade) {
+        showMessage('Выберите оценку', 'error');
+        return;
+      }
+
+      const btn = document.getElementById('submitBtn');
+      btn.disabled = true;
+      btn.textContent = 'Отправка...';
+
+      const data = {
+        studentId: document.getElementById('studentId').value,
+        activity: document.getElementById('activity').value,
+        grade: selectedGrade,
+        comment: document.getElementById('comment').value,
+        dateTime: new Date().toISOString()
+      };
+
+      // Формируем CSV строку
+      const csvLine = [
+        data.studentId,
+        data.activity,
+        data.grade,
+        data.comment,
+        data.dateTime
+      ].map(v => `"${v}"`).join(',');
+
+      try {
+        const response = await fetch(SERVER_URL, {
+          method: 'POST',
+          headers: { 'Content-Type': 'text/plain' },
+          body: csvLine
+        });
+
+        const result = await response.json();
+        
+        if (result.success) {
+          showMessage('✓ Запись сохранена!', 'success');
+          document.getElementById('form').reset();
+          document.querySelectorAll('.grade-btn').forEach(b => b.classList.remove('active'));
+          selectedGrade = '';
+        } else {
+          showMessage('Ошибка сохранения', 'error');
+        }
+      } catch (error) {
+        showMessage('Ошибка соединения с сервером', 'error');
+      }
+
+      btn.disabled = false;
+      btn.textContent = 'Отправить';
+    });
+
+    function showMessage(text, type) {
+      const msg = document.getElementById('message');
+      msg.textContent = text;
+      msg.className = 'message ' + type;
+      setTimeout(() => {
+        msg.className = 'message';
+      }, 3000);
     }
-}</pre>
-      </div>
-    </main>
-
-    <footer class="footer">
-      <p>Student Grade Tracker © 2024 | Безопасная система учёта оценок</p>
-    </footer>
-  </div>
-
-  <!-- QR Scanner Modal -->
-  <div id="qr-scanner-modal" class="modal hidden">
-    <div class="modal-content">
-      <div class="modal-header modal-header-indigo">
-        <h3><i class="fas fa-qrcode"></i> Сканирование QR-кода</h3>
-        <button id="btn-close-scanner" class="modal-close">&times;</button>
-      </div>
-      <div class="modal-body">
-        <div id="qr-reader"></div>
-        <p class="scanner-hint"><i class="fas fa-camera"></i> Наведите камеру на QR-код</p>
-      </div>
-    </div>
-  </div>
-
-  <!-- QR Generator Modal -->
-  <div id="qr-generator-modal" class="modal hidden">
-    <div class="modal-content modal-sm">
-      <div class="modal-header modal-header-emerald">
-        <h3><i class="fas fa-qrcode"></i> QR-код студента</h3>
-        <button id="btn-close-generator" class="modal-close">&times;</button>
-      </div>
-      <div class="modal-body text-center">
-        <div class="form-group">
-          <label>ИД студента</label>
-          <div class="input-with-buttons">
-            <input type="text" id="qr-input-id" placeholder="Введите ИД" />
-            <button type="button" id="btn-create-qr" class="btn btn-primary btn-sm">
-              <i class="fas fa-qrcode"></i> Создать
-            </button>
-          </div>
-        </div>
-        <div id="qr-display" class="qr-display hidden">
-          <div id="qrcode-canvas"></div>
-          <p id="qr-id-text" class="qr-id-text"></p>
-          <p class="qr-hint">Отсканируйте для быстрого ввода ИД</p>
-        </div>
-      </div>
-    </div>
-  </div>
-
-  <script src="/js/crypto.js"></script>
-  <script src="/js/app.js"></script>
+  </script>
 </body>
 </html>
