@@ -90,12 +90,12 @@ const App = (function() {
 
   // ===== Apply Configuration =====
   function applyConfig() {
-    // Hide/show fields based on config
+    // Hide/show fields based on config using data-field attributes
     const fieldMap = {
-      studentId: '.form-group:nth-child(1)',
-      activity: '.form-group:nth-child(2)',
-      grade: '.form-group:nth-child(3)',
-      comment: '.form-group:nth-child(4)',
+      studentId: '[data-field="studentId"]',
+      activity: '[data-field="activity"]',
+      grade: '[data-field="grade"]',
+      comment: '[data-field="comment"]',
       fileUrl: '[data-field="fileUrl"]'
     };
 
