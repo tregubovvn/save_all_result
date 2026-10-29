@@ -1,5 +1,2 @@
-// Entry point - импортируем стили
+/* Entry point - только подключение стилей */
 import './index.css';
-
-// Приложение инициализируется из public/js/app.js
-// через DOMContentLoaded событие

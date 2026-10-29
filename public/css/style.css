@@ -98,11 +98,13 @@ body {
   cursor: pointer;
   transition: all 0.2s;
   position: relative;
+  padding: 0;
 }
 
 .icon-btn:hover {
   background: rgba(255, 255, 255, 0.1);
   color: var(--text-primary);
+  transform: scale(1.05);
 }
 
 .badge {
@@ -249,11 +251,16 @@ body {
   font-weight: 500;
   cursor: pointer;
   transition: all 0.2s;
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  min-width: 50px;
 }
 
 .grade-btn:hover {
   background: rgba(255, 255, 255, 0.1);
   color: var(--text-primary);
+  transform: translateY(-2px);
 }
 
 .grade-btn.active {
@@ -261,6 +268,7 @@ body {
   color: white;
   border-color: transparent;
   box-shadow: 0 4px 15px rgba(245, 158, 11, 0.3);
+  transform: translateY(-2px);
 }
 
 .grade-buttons input {
@@ -269,6 +277,24 @@ body {
 }
 
 /* ===== Buttons ===== */
+button, .btn {
+  padding: 12px 20px;
+  border-radius: 12px;
+  border: none;
+  font-size: 14px;
+  font-weight: 600;
+  cursor: pointer;
+  transition: all 0.2s;
+  display: inline-flex;
+  align-items: center;
+  gap: 8px;
+  background: transparent;
+  color: inherit;
+  font-family: inherit;
+  line-height: 1;
+  text-decoration: none;
+}
+
 .btn {
   padding: 12px 20px;
   border-radius: 12px;
@@ -300,20 +326,24 @@ body {
   background: linear-gradient(135deg, var(--indigo), var(--purple));
   color: white;
   box-shadow: 0 4px 15px rgba(99, 102, 241, 0.2);
+  padding: 12px 20px;
 }
 
 .btn-qr:hover {
   box-shadow: 0 4px 20px rgba(99, 102, 241, 0.4);
+  transform: translateY(-2px);
 }
 
 .btn-qr-green {
   background: linear-gradient(135deg, var(--emerald), #0d9488);
   color: white;
   box-shadow: 0 4px 15px rgba(16, 185, 129, 0.2);
+  padding: 12px 20px;
 }
 
 .btn-qr-green:hover {
   box-shadow: 0 4px 20px rgba(16, 185, 129, 0.4);
+  transform: translateY(-2px);
 }
 
 .btn-success {
