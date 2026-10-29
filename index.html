@@ -50,7 +50,7 @@
       <div class="form-card">
         <form id="grade-form">
           <!-- Student ID -->
-          <div class="form-group">
+          <div class="form-group" data-field="studentId">
             <label><i class="fas fa-id-card"></i> ИД Студента <span class="required">*</span></label>
             <div class="input-with-buttons">
               <input type="text" id="student-id" placeholder="Введите или отсканируйте QR" required />
@@ -64,13 +64,13 @@
           </div>
 
           <!-- Activity -->
-          <div class="form-group">
+          <div class="form-group" data-field="activity">
             <label><i class="fas fa-book"></i> Название активности <span class="required">*</span></label>
             <input type="text" id="activity" placeholder="Например: Лабораторная работа №1" required />
           </div>
 
           <!-- Grade -->
-          <div class="form-group">
+          <div class="form-group" data-field="grade">
             <label><i class="fas fa-star"></i> Оценка <span class="required">*</span></label>
             <div class="grade-buttons">
               <button type="button" class="grade-btn" data-grade="5">5</button>
@@ -83,7 +83,7 @@
           </div>
 
           <!-- Comment -->
-          <div class="form-group">
+          <div class="form-group" data-field="comment">
             <label><i class="fas fa-comment"></i> Комментарий</label>
             <textarea id="comment" placeholder="Дополнительные заметки..." rows="3"></textarea>
           </div>
