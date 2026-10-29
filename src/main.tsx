@@ -1,6 +1,5 @@
-import React from "react";
-import ReactDOM from "react-dom/client";
-import "./index.css";
-import App from "./App.tsx";
+// Entry point - импортируем стили
+import './index.css';
 
-ReactDOM.createRoot(document.getElementById("root")!).render(<App />);
+// Приложение инициализируется из public/js/app.js
+// через DOMContentLoaded событие

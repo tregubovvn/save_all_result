@@ -1,135 +1,160 @@
 # Student Grade Tracker
 
-Приложение для учёта оценок и активностей студентов с поддержкой QR-сканирования, шифрованием данных и сохранением в CSV на сервере nginx.
+Приложение для учёта оценок и активностей студентов. Чистый JavaScript, без серверной части. Nginx с Lua-модулем напрямую записывает данные в CSV файл.
 
 ## 🚀 Возможности
 
-- **Форма ввода данных**: ИД студента, активность, оценка, комментарий, дата/время, URL файла
-- **QR-сканирование**: Сканирование QR-кодов через камеру устройства для быстрого ввода ИД
-- **QR-генерация**: Создание QR-кодов для студентов
-- **Шифрование**: XOR + Base64 шифрование данных перед отправкой
-- **CSV экспорт**: Сохранение данных в формате CSV на сервере nginx
+- **Форма ввода**: ИД студента, активность, оценка, комментарий, дата/время, URL файла
+- **QR-сканирование**: Через камеру устройства (html5-qrcode)
+- **QR-генерация**: Создание QR-кодов для студентов (qrcode.js)
+- **Шифрование**: XOR + Base64 перед отправкой на сервер
+- **CSV хранение**: Nginx + Lua записывает напрямую в CSV файл
+- **Без серверной части**: Не нужен Node.js, Python или PHP
 - **Адаптивный дизайн**: Работает на мобильных и десктопных устройствах
-- **Безопасность**: Токены, SSL/TLS, CORS, rate limiting
 
 ## 📦 Установка
 
-### 1. Фронтенд (статические файлы)
+### 1. Сборка фронтенда
 
 ```bash
-# Установка зависимостей
 npm install
-
-# Сборка для продакшена
 npm run build
 
 # Файлы будут в папке dist/
-# Скопируйте их на сервер: /var/www/student-tracker/dist/
+# Скопируйте на сервер:
+sudo cp -r dist/* /var/www/student-tracker/
 ```
 
-### 2. Бэкенд (Node.js сервер)
+### 2. Установка OpenResty (nginx + Lua)
 
 ```bash
-# Запуск API сервера
-node server/server.js
+# Ubuntu/Debian
+wget -O - https://openresty.org/package/pubkey.gpg | sudo apt-key add -
+echo "deb http://openresty.org/package/ubuntu $(lsb_release -sc) main" | sudo tee /etc/apt/sources.list.d/openresty.list
+sudo apt-get update
+sudo apt-get install -y openresty
 
-# Сервер запустится на порту 3000
+# Или используйте обычный nginx + lua-nginx-module
 ```
 
-### 3. Nginx конфигурация
+### 3. Настройка Nginx
 
 ```bash
 # Скопируйте конфигурацию
-sudo cp server/nginx.conf /etc/nginx/sites-available/student-tracker
-
-# Создайте симлинк
+sudo cp server/nginx-lua.conf /etc/openresty/nginx.conf
+# или
+sudo cp server/nginx-lua.conf /etc/nginx/sites-available/student-tracker
 sudo ln -s /etc/nginx/sites-available/student-tracker /etc/nginx/sites-enabled/
 
 # Отредактируйте:
-# - server_name (ваш домен)
+# - server_name (ваш домен или IP)
 # - ssl_certificate пути
-# - root путь к dist/
+# - root путь к файлам
+
+# Создайте директорию для CSV
+sudo mkdir -p /var/www/student-tracker/data
+sudo chown -R www-data:www-data /var/www/student-tracker/data
 
 # Проверьте конфигурацию
 sudo nginx -t
 
-# Перезапустите nginx
+# Перезапустите
 sudo systemctl reload nginx
+```
+
+### 4. SSL сертификат (опционально)
+
+```bash
+# Self-signed для тестирования
+sudo openssl req -x509 -nodes -days 365 -newkey rsa:2048 \
+  -keyout /etc/ssl/private/student-tracker.key \
+  -out /etc/ssl/certs/student-tracker.crt
+
+# Или Let's Encrypt
+sudo certbot --nginx -d your-domain.com
 ```
 
 ## 🔐 Безопасность
 
-### Шифрование данных
-- Данные шифруются алгоритмом XOR с ключом перед отправкой
-- Дополнительно кодируются в Base64
-- Каждый запрос содержит временный токен (действителен 24 часа)
+### Шифрование
+- Данные шифруются XOR с ключом + Base64 на клиенте
+- Ключ должен совпадать в `public/js/crypto.js` и `nginx-lua.conf`
+- Каждый запрос содержит временный токен (24 часа)
 
 ### Серверная защита
-- SSL/TLS для HTTPS
+- SSL/TLS (HTTPS)
+- Rate limiting (5 запросов/сек)
 - CORS заголовки
-- Rate limiting (10 запросов/сек)
-- Валидация токенов
-- Безопасные HTTP заголовки (XSS, CSRF, HSTS)
+- Валидация токенов через Lua
+- Безопасные HTTP заголовки
 
-### Рекомендации
-- Смените `ENCRYPTION_KEY` в `src/utils/crypto.ts` и `server/server.js`
-- Используйте настоящие SSL сертификаты (Let's Encrypt)
-- Настройте firewall (ufw/iptables)
-- Регулярно обновляйте зависимости
+### ⚠️ Важно!
+- **Смените ключ шифрования** в `public/js/crypto.js` и `server/nginx-lua.conf`
+- Используйте настоящие SSL сертификаты для продакшена
+- Настройте firewall
 
 ## 📱 Использование через URL
 
-После развёртывания приложение доступно по URL:
+После развёртывания:
 ```
 https://your-domain.com
 ```
 
-На мобильных устройствах можно добавить на рабочий стол как PWA.
+На мобильных можно добавить на рабочий стол.
 
 ## 📊 Формат CSV
+
+Файл создаётся автоматически при первой записи:
 
 ```csv
 Student ID,Activity,Grade,Comment,Date/Time,File URL
 STU001,Лабораторная работа №1,5,Отличная работа,2024-01-15T10:30,https://files.example.com/lab1.pdf
-STU002,Курсовой проект,4,Хорошая работа с замечаниями,2024-01-15T11:00,
+STU002,Курсовой проект,4,Хорошая работа,2024-01-15T11:00,
 ```
 
 ## 🛠 Технологии
 
-- **Frontend**: React, TypeScript, Vite, Tailwind CSS
-- **QR**: html5-qrcode (сканирование), qrcode (генерация)
-- **Backend**: Node.js (API сервер)
-- **Server**: Nginx (reverse proxy, статика, SSL)
-- **Хранение**: CSV файлы
+- **Frontend**: Чистый HTML/CSS/JavaScript (без фреймворков)
+- **QR**: html5-qrcode (сканирование), qrcode.js (генерация)
+- **Backend**: Nginx + Lua-nginx-module (OpenResty)
+- **Хранение**: CSV файлы на диске
+- **Сборка**: Vite (для минификации)
 
-## 📁 Структура проекта
+## 📁 Структура
 
 ```
+├── index.html              # Главная страница
+├── public/
+│   ├── css/
+│   │   └── style.css       # Стили приложения
+│   └── js/
+│       ├── crypto.js       # Модуль шифрования
+│       └── app.js          # Основная логика
 ├── src/
-│   ├── App.tsx              # Главный компонент
-│   ├── components/
-│   │   ├── QRScanner.tsx    # Компонент QR-сканера
-│   │   └── QRGenerator.tsx  # Компонент генерации QR
-│   ├── utils/
-│   │   ├── crypto.ts        # Шифрование/дешифрование
-│   │   └── api.ts           # API клиент
-│   ├── index.css            # Стили
-│   └── main.tsx             # Точка входа
+│   ├── main.tsx            # Entry point для Vite
+│   └── index.css           # Tailwind импорт
 ├── server/
-│   ├── server.js            # Node.js API сервер
-│   └── nginx.conf           # Конфигурация nginx
-├── dist/                    # Собранные файлы (после build)
-└── data/                    # CSV файлы (создаётся автоматически)
+│   └── nginx-lua.conf      # Конфигурация nginx + Lua
+└── data/                   # CSV файлы (на сервере)
+    └── records.csv         # Автоматически создаётся
 ```
+
+## 🔄 Как это работает
+
+1. Пользователь заполняет форму в браузере
+2. Данные шифруются (XOR + Base64) на клиенте
+3. Отправляются через POST на `/api/submit`
+4. Nginx принимает запрос, Lua скрипт:
+   - Проверяет токен
+   - Дешифрует данные
+   - Записывает CSV строку в файл
+5. Если файла нет — создаётся новый с заголовком
+6. Если файл есть — запись добавляется в конец
 
 ## ⚙️ Переменные
 
-| Переменная | Описание | По умолчанию |
-|-----------|----------|-------------|
-| `ENCRYPTION_KEY` | Ключ шифрования | `StGr@2024!SecKey` |
-| `PORT` | Порт API сервера | `3000` |
-| `CSV_FILE` | Путь к CSV файлу | `./data/student_records.csv` |
-
-## 📝 Лицензия
-
-MIT
+| Переменная | Где | Описание |
+|-----------|-----|----------|
+| `ENCRYPTION_KEY` | crypto.js, nginx-lua.conf | Ключ шифрования |
+| `csv_file` | nginx-lua.conf | Путь к CSV файлу |
+| `serverUrl` | localStorage | URL сервера (настраивается в UI) |
