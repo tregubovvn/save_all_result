@@ -188,7 +188,7 @@
   <script src="https://unpkg.com/html5-qrcode@2.3.8/html5-qrcode.min.js"></script>
   <script>
     let selectedGrade = '';
-    const SERVER_URL = 'http://194.87.103.77/results/api/submit';
+    const SERVER_URL = '/api/submit';
 
     // Выбор оценки
     document.querySelectorAll('.grade-btn').forEach(btn => {
@@ -253,9 +253,7 @@
           body: csvLine
         });
 
-        const result = await response.json();
-        
-        if (result.success) {
+        if (response.ok) {
           showMessage('✓ Запись сохранена!', 'success');
           document.getElementById('form').reset();
           document.querySelectorAll('.grade-btn').forEach(b => b.classList.remove('active'));
