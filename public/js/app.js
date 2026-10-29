@@ -20,6 +20,8 @@ const App = (function() {
 
   // ===== Initialization =====
   function init(options = {}) {
+    console.log('App.init() called');
+    
     // Merge config
     config = { ...config, ...options };
     
@@ -27,11 +29,18 @@ const App = (function() {
     parseUrlParams();
     
     cacheElements();
+    console.log('Elements cached');
+    
     loadSettings();
     loadRecords();
+    
     bindEvents();
+    console.log('Events bound');
+    
     applyConfig();
     updateUI();
+    
+    console.log('App initialized successfully!');
   }
 
   function parseUrlParams() {
@@ -79,7 +88,7 @@ const App = (function() {
     elements.historyCount = document.getElementById('history-count');
     elements.btnExport = document.getElementById('btn-export');
     
-    elements.gradeButtons = document.querySelectorAll('.grade-btn');
+    elements.gradeButtons = Array.from(document.querySelectorAll('.grade-btn'));
     
     // Контейнеры для скрытия в embed режиме
     elements.header = document.querySelector('.header');
@@ -128,47 +137,81 @@ const App = (function() {
 
   // ===== Event Binding =====
   function bindEvents() {
+    console.log('Binding events...');
+    
     // Form submission
-    elements.form.addEventListener('submit', handleSubmit);
+    if (elements.form) {
+      elements.form.addEventListener('submit', handleSubmit);
+      console.log('✓ Form submit handler bound');
+    }
     
     // Settings
     if (elements.btnSettings) {
-      elements.btnSettings.addEventListener('click', () => togglePanel('settings'));
+      elements.btnSettings.addEventListener('click', () => {
+        console.log('Settings button clicked');
+        togglePanel('settings');
+      });
+      console.log('✓ Settings button handler bound');
     }
     if (elements.btnSaveSettings) {
       elements.btnSaveSettings.addEventListener('click', saveSettings);
+      console.log('✓ Save settings button handler bound');
     }
     
     // History
     if (elements.btnHistory) {
-      elements.btnHistory.addEventListener('click', () => togglePanel('history'));
+      elements.btnHistory.addEventListener('click', () => {
+        console.log('History button clicked');
+        togglePanel('history');
+      });
+      console.log('✓ History button handler bound');
     }
     if (elements.btnExport) {
       elements.btnExport.addEventListener('click', exportCSV);
+      console.log('✓ Export button handler bound');
     }
     
     // QR Scanner
     if (elements.btnScanQR) {
-      elements.btnScanQR.addEventListener('click', openQRScanner);
+      elements.btnScanQR.addEventListener('click', () => {
+        console.log('QR Scanner button clicked');
+        openQRScanner();
+      });
+      console.log('✓ QR Scanner button handler bound');
     }
     if (elements.btnCloseScanner) {
       elements.btnCloseScanner.addEventListener('click', closeQRScanner);
+      console.log('✓ Close scanner button handler bound');
     }
     
     // QR Generator
     if (elements.btnGenQR) {
-      elements.btnGenQR.addEventListener('click', openQRGenerator);
+      elements.btnGenQR.addEventListener('click', () => {
+        console.log('QR Generator button clicked');
+        openQRGenerator();
+      });
+      console.log('✓ QR Generator button handler bound');
     }
     if (elements.btnCloseGenerator) {
       elements.btnCloseGenerator.addEventListener('click', closeQRGenerator);
+      console.log('✓ Close generator button handler bound');
     }
     if (elements.btnCreateQR) {
-      elements.btnCreateQR.addEventListener('click', generateQR);
+      elements.btnCreateQR.addEventListener('click', () => {
+        console.log('Create QR button clicked');
+        generateQR();
+      });
+      console.log('✓ Create QR button handler bound');
     }
     
     // Grade buttons
-    elements.gradeButtons.forEach(btn => {
-      btn.addEventListener('click', () => selectGrade(btn));
+    console.log('Grade buttons found:', elements.gradeButtons.length);
+    elements.gradeButtons.forEach((btn, index) => {
+      btn.addEventListener('click', () => {
+        console.log('Grade button clicked:', btn.dataset.grade);
+        selectGrade(btn);
+      });
+      console.log(`✓ Grade button ${index} (${btn.dataset.grade}) handler bound`);
     });
 
     // Close modals on backdrop click
@@ -182,6 +225,8 @@ const App = (function() {
         if (e.target === elements.qrGeneratorModal) closeQRGenerator();
       });
     }
+    
+    console.log('All events bound successfully!');
   }
 
   // ===== Grade Selection =====
