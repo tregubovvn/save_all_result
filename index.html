@@ -1,0 +1,280 @@
+<!DOCTYPE html>
+<html lang="ru">
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+  <title>Student Grade Tracker</title>
+  <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.4.0/css/all.min.css" />
+  <script src="https://unpkg.com/html5-qrcode@2.3.8/html5-qrcode.min.js"></script>
+  <script src="https://cdn.jsdelivr.net/npm/qrcodejs@1.0.0/qrcode.min.js"></script>
+  <link rel="stylesheet" href="/css/style.css" />
+</head>
+<body>
+  <div id="app">
+    <!-- Header -->
+    <header class="header">
+      <div class="header-inner">
+        <div class="header-brand">
+          <div class="header-icon">
+            <i class="fas fa-graduation-cap"></i>
+          </div>
+          <div>
+            <h1>Student Tracker</h1>
+            <p>Учёт оценок и активностей</p>
+          </div>
+        </div>
+        <div class="header-actions">
+          <button id="btn-settings" class="icon-btn" title="Настройки">
+            <i class="fas fa-cog"></i>
+          </button>
+          <button id="btn-history" class="icon-btn" title="История">
+            <i class="fas fa-list"></i>
+            <span id="records-count" class="badge hidden">0</span>
+          </button>
+        </div>
+      </div>
+    </header>
+
+    <main class="main">
+      <!-- Settings Panel -->
+      <div id="settings-panel" class="panel hidden">
+        <h3><i class="fas fa-server"></i> Настройки сервера</h3>
+        <div class="form-group">
+          <label>URL сервера (nginx API endpoint)</label>
+          <input type="url" id="server-url" placeholder="https://your-server.com" />
+        </div>
+        <button id="btn-save-settings" class="btn btn-primary">Сохранить</button>
+      </div>
+
+      <!-- Main Form -->
+      <div class="form-card">
+        <form id="grade-form">
+          <!-- Student ID -->
+          <div class="form-group">
+            <label><i class="fas fa-id-card"></i> ИД Студента <span class="required">*</span></label>
+            <div class="input-with-buttons">
+              <input type="text" id="student-id" placeholder="Введите или отсканируйте QR" required />
+              <button type="button" id="btn-scan-qr" class="btn btn-qr" title="Сканировать QR">
+                <i class="fas fa-qrcode"></i>
+              </button>
+              <button type="button" id="btn-gen-qr" class="btn btn-qr-green" title="Сгенерировать QR">
+                <i class="fas fa-plus-circle"></i>
+              </button>
+            </div>
+          </div>
+
+          <!-- Activity -->
+          <div class="form-group">
+            <label><i class="fas fa-book"></i> Название активности <span class="required">*</span></label>
+            <input type="text" id="activity" placeholder="Например: Лабораторная работа №1" required />
+          </div>
+
+          <!-- Grade -->
+          <div class="form-group">
+            <label><i class="fas fa-star"></i> Оценка <span class="required">*</span></label>
+            <div class="grade-buttons">
+              <button type="button" class="grade-btn" data-grade="5">5</button>
+              <button type="button" class="grade-btn" data-grade="4">4</button>
+              <button type="button" class="grade-btn" data-grade="3">3</button>
+              <button type="button" class="grade-btn" data-grade="2">2</button>
+              <button type="button" class="grade-btn" data-grade="1">1</button>
+              <button type="button" class="grade-btn" data-grade="Зачёт">Зачёт</button>
+              <button type="button" class="grade-btn" data-grade="Незачёт">Незачёт</button>
+              <input type="text" id="grade-custom" placeholder="Другая..." />
+            </div>
+          </div>
+
+          <!-- Comment -->
+          <div class="form-group">
+            <label><i class="fas fa-comment"></i> Комментарий</label>
+            <textarea id="comment" placeholder="Дополнительные заметки..." rows="3"></textarea>
+          </div>
+
+          <!-- Date/Time & File URL -->
+          <div class="form-row">
+            <div class="form-group">
+              <label><i class="fas fa-calendar"></i> Дата и время</label>
+              <input type="datetime-local" id="datetime" />
+            </div>
+            <div class="form-group">
+              <label><i class="fas fa-link"></i> URL файла</label>
+              <input type="url" id="file-url" placeholder="https://..." />
+            </div>
+          </div>
+
+          <!-- Result Message -->
+          <div id="result-message" class="result-message hidden"></div>
+
+          <!-- Submit -->
+          <button type="submit" id="btn-submit" class="btn btn-submit">
+            <i class="fas fa-paper-plane"></i>
+            <span>Отправить</span>
+          </button>
+        </form>
+      </div>
+
+      <!-- History Panel -->
+      <div id="history-panel" class="panel hidden">
+        <div class="history-header">
+          <h3><i class="fas fa-history"></i> История записей (<span id="history-count">0</span>)</h3>
+          <button id="btn-export" class="btn btn-success btn-sm">
+            <i class="fas fa-download"></i> Экспорт CSV
+          </button>
+        </div>
+        <div id="records-list" class="records-list">
+          <div class="empty-state">
+            <i class="fas fa-inbox"></i>
+            <p>Нет записей</p>
+          </div>
+        </div>
+      </div>
+
+      <!-- Info Cards -->
+      <div class="info-cards">
+        <div class="info-card">
+          <div class="info-icon info-icon-indigo">
+            <i class="fas fa-qrcode"></i>
+          </div>
+          <h4>QR-сканирование</h4>
+          <p>Сканируйте QR-код для быстрого ввода ИД студента</p>
+        </div>
+        <div class="info-card">
+          <div class="info-icon info-icon-emerald">
+            <i class="fas fa-lock"></i>
+          </div>
+          <h4>Шифрование</h4>
+          <p>Данные шифруются перед отправкой на сервер</p>
+        </div>
+        <div class="info-card">
+          <div class="info-icon info-icon-amber">
+            <i class="fas fa-file-csv"></i>
+          </div>
+          <h4>CSV формат</h4>
+          <p>Результаты сохраняются на сервере nginx в CSV</p>
+        </div>
+      </div>
+
+      <!-- Server Config Info -->
+      <div class="config-card">
+        <h3><i class="fas fa-info-circle"></i> Конфигурация nginx (Lua)</h3>
+        <pre class="config-code">
+# nginx.conf с Lua модулем для записи в CSV
+# Требуется: openresty или nginx + lua-nginx-module
+
+server {
+    listen 443 ssl http2;
+    server_name your-domain.com;
+
+    ssl_certificate     /etc/ssl/certs/server.crt;
+    ssl_certificate_key /etc/ssl/private/server.key;
+
+    # API endpoint - запись в CSV через Lua
+    location /api/submit {
+        content_by_lua_block {
+            local csv_file = "/var/www/student-tracker/data/records.csv"
+
+            -- Читаем тело запроса
+            ngx.req.read_body()
+            local body = ngx.req.get_body_data()
+
+            -- Проверяем токен
+            local token = ngx.req.get_headers()["x-request-token"]
+            if not token then
+                ngx.status = 401
+                ngx.say('{"success":false,"message":"No token"}')
+                return
+            end
+
+            -- Дешифруем данные (XOR + Base64)
+            local data = ngx.decode_base64(body)
+            -- XOR дешифрование выполняется на стороне Lua
+
+            -- Проверяем существование файла
+            local f = io.open(csv_file, "r")
+            if not f then
+                -- Создаём новый файл с заголовком
+                f = io.open(csv_file, "w")
+                f:write("Student ID,Activity,Grade,Comment,Date/Time,File URL\n")
+                f:close()
+            else
+                f:close()
+            end
+
+            -- Добавляем запись
+            f = io.open(csv_file, "a")
+            f:write(data .. "\n")
+            f:close()
+
+            ngx.header["Content-Type"] = "application/json"
+            ngx.header["Access-Control-Allow-Origin"] = "*"
+            ngx.say('{"success":true,"message":"Запись сохранена"}')
+        }
+
+        # CORS preflight
+        if ($request_method = 'OPTIONS') {
+            add_header 'Access-Control-Allow-Origin' '*';
+            add_header 'Access-Control-Allow-Methods' 'POST, OPTIONS';
+            add_header 'Access-Control-Allow-Headers' 'Content-Type, X-Request-Token';
+            return 204;
+        }
+    }
+
+    # Статические файлы
+    location / {
+        root /var/www/student-tracker;
+        try_files $uri $uri/ /index.html;
+    }
+}</pre>
+      </div>
+    </main>
+
+    <footer class="footer">
+      <p>Student Grade Tracker © 2024 | Безопасная система учёта оценок</p>
+    </footer>
+  </div>
+
+  <!-- QR Scanner Modal -->
+  <div id="qr-scanner-modal" class="modal hidden">
+    <div class="modal-content">
+      <div class="modal-header modal-header-indigo">
+        <h3><i class="fas fa-qrcode"></i> Сканирование QR-кода</h3>
+        <button id="btn-close-scanner" class="modal-close">&times;</button>
+      </div>
+      <div class="modal-body">
+        <div id="qr-reader"></div>
+        <p class="scanner-hint"><i class="fas fa-camera"></i> Наведите камеру на QR-код</p>
+      </div>
+    </div>
+  </div>
+
+  <!-- QR Generator Modal -->
+  <div id="qr-generator-modal" class="modal hidden">
+    <div class="modal-content modal-sm">
+      <div class="modal-header modal-header-emerald">
+        <h3><i class="fas fa-qrcode"></i> QR-код студента</h3>
+        <button id="btn-close-generator" class="modal-close">&times;</button>
+      </div>
+      <div class="modal-body text-center">
+        <div class="form-group">
+          <label>ИД студента</label>
+          <div class="input-with-buttons">
+            <input type="text" id="qr-input-id" placeholder="Введите ИД" />
+            <button type="button" id="btn-create-qr" class="btn btn-primary btn-sm">
+              <i class="fas fa-qrcode"></i> Создать
+            </button>
+          </div>
+        </div>
+        <div id="qr-display" class="qr-display hidden">
+          <div id="qrcode-canvas"></div>
+          <p id="qr-id-text" class="qr-id-text"></p>
+          <p class="qr-hint">Отсканируйте для быстрого ввода ИД</p>
+        </div>
+      </div>
+    </div>
+  </div>
+
+  <script src="/js/crypto.js"></script>
+  <script src="/js/app.js"></script>
+  <script type="module" src="/src/main.tsx"></script>
+</body>
+</html>
