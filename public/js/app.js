@@ -1,6 +1,6 @@
 /**
  * Student Grade Tracker - Main Application
- * Чистый JavaScript без фреймворков
+ * Модульное приложение с поддержкой встраивания
  */
 
 const App = (function() {
@@ -8,27 +8,49 @@ const App = (function() {
   let records = [];
   let selectedGrade = '';
   let html5QrCode = null;
+  let config = {
+    fields: ['studentId', 'activity', 'grade', 'comment', 'fileUrl'],
+    mode: 'standalone', // 'standalone' | 'embed'
+    onSuccess: null,
+    onError: null
+  };
 
   // ===== DOM Elements =====
   const elements = {};
 
   // ===== Initialization =====
-  function init() {
+  function init(options = {}) {
+    // Merge config
+    config = { ...config, ...options };
+    
+    // Parse URL params for embed mode
+    parseUrlParams();
+    
     cacheElements();
     loadSettings();
     loadRecords();
     bindEvents();
-    setDefaultDateTime();
+    applyConfig();
     updateUI();
+  }
+
+  function parseUrlParams() {
+    const params = new URLSearchParams(window.location.search);
+    
+    if (params.has('mode') && params.get('mode') === 'embed') {
+      config.mode = 'embed';
+    }
+    
+    if (params.has('fields')) {
+      config.fields = params.get('fields').split(',').map(f => f.trim());
+    }
   }
 
   function cacheElements() {
     elements.form = document.getElementById('grade-form');
     elements.studentId = document.getElementById('student-id');
     elements.activity = document.getElementById('activity');
-    elements.gradeCustom = document.getElementById('grade-custom');
     elements.comment = document.getElementById('comment');
-    elements.datetime = document.getElementById('datetime');
     elements.fileUrl = document.getElementById('file-url');
     elements.btnSubmit = document.getElementById('btn-submit');
     elements.resultMessage = document.getElementById('result-message');
@@ -58,6 +80,50 @@ const App = (function() {
     elements.btnExport = document.getElementById('btn-export');
     
     elements.gradeButtons = document.querySelectorAll('.grade-btn');
+    
+    // Контейнеры для скрытия в embed режиме
+    elements.header = document.querySelector('.header');
+    elements.footer = document.querySelector('.footer');
+    elements.infoCards = document.querySelector('.info-cards');
+    elements.configCard = document.querySelector('.config-card');
+  }
+
+  // ===== Apply Configuration =====
+  function applyConfig() {
+    // Hide/show fields based on config
+    const fieldMap = {
+      studentId: '.form-group:nth-child(1)',
+      activity: '.form-group:nth-child(2)',
+      grade: '.form-group:nth-child(3)',
+      comment: '.form-group:nth-child(4)',
+      fileUrl: '[data-field="fileUrl"]'
+    };
+
+    // Hide all fields first
+    Object.values(fieldMap).forEach(selector => {
+      const el = elements.form.querySelector(selector);
+      if (el) el.style.display = 'none';
+    });
+
+    // Show only configured fields
+    config.fields.forEach(field => {
+      if (fieldMap[field]) {
+        const el = elements.form.querySelector(fieldMap[field]);
+        if (el) el.style.display = '';
+      }
+    });
+
+    // Embed mode: hide header, footer, info cards
+    if (config.mode === 'embed') {
+      if (elements.header) elements.header.style.display = 'none';
+      if (elements.footer) elements.footer.style.display = 'none';
+      if (elements.infoCards) elements.infoCards.style.display = 'none';
+      if (elements.configCard) elements.configCard.style.display = 'none';
+      
+      // Remove padding from main
+      const main = document.querySelector('.main');
+      if (main) main.style.paddingTop = '0';
+    }
   }
 
   // ===== Event Binding =====
@@ -66,42 +132,56 @@ const App = (function() {
     elements.form.addEventListener('submit', handleSubmit);
     
     // Settings
-    elements.btnSettings.addEventListener('click', () => togglePanel('settings'));
-    elements.btnSaveSettings.addEventListener('click', saveSettings);
+    if (elements.btnSettings) {
+      elements.btnSettings.addEventListener('click', () => togglePanel('settings'));
+    }
+    if (elements.btnSaveSettings) {
+      elements.btnSaveSettings.addEventListener('click', saveSettings);
+    }
     
     // History
-    elements.btnHistory.addEventListener('click', () => togglePanel('history'));
-    elements.btnExport.addEventListener('click', exportCSV);
+    if (elements.btnHistory) {
+      elements.btnHistory.addEventListener('click', () => togglePanel('history'));
+    }
+    if (elements.btnExport) {
+      elements.btnExport.addEventListener('click', exportCSV);
+    }
     
     // QR Scanner
-    elements.btnScanQR.addEventListener('click', openQRScanner);
-    elements.btnCloseScanner.addEventListener('click', closeQRScanner);
+    if (elements.btnScanQR) {
+      elements.btnScanQR.addEventListener('click', openQRScanner);
+    }
+    if (elements.btnCloseScanner) {
+      elements.btnCloseScanner.addEventListener('click', closeQRScanner);
+    }
     
     // QR Generator
-    elements.btnGenQR.addEventListener('click', openQRGenerator);
-    elements.btnCloseGenerator.addEventListener('click', closeQRGenerator);
-    elements.btnCreateQR.addEventListener('click', generateQR);
+    if (elements.btnGenQR) {
+      elements.btnGenQR.addEventListener('click', openQRGenerator);
+    }
+    if (elements.btnCloseGenerator) {
+      elements.btnCloseGenerator.addEventListener('click', closeQRGenerator);
+    }
+    if (elements.btnCreateQR) {
+      elements.btnCreateQR.addEventListener('click', generateQR);
+    }
     
     // Grade buttons
     elements.gradeButtons.forEach(btn => {
       btn.addEventListener('click', () => selectGrade(btn));
     });
-    
-    // Custom grade input
-    elements.gradeCustom.addEventListener('input', (e) => {
-      if (e.target.value) {
-        selectedGrade = e.target.value;
-        elements.gradeButtons.forEach(b => b.classList.remove('active'));
-      }
-    });
 
     // Close modals on backdrop click
-    elements.qrScannerModal.addEventListener('click', (e) => {
-      if (e.target === elements.qrScannerModal) closeQRScanner();
-    });
-    elements.qrGeneratorModal.addEventListener('click', (e) => {
-      if (e.target === elements.qrGeneratorModal) closeQRGenerator();
-    });
+    if (elements.qrScannerModal) {
+      elements.qrScannerModal.addEventListener('click', (e) => {
+        if (e.target === elements.qrScannerModal) closeQRScanner();
+      });
+    }
+    if (elements.qrGeneratorModal) {
+      elements.qrGeneratorModal.addEventListener('click', (e) => {
+        if (e.target === elements.qrGeneratorModal) closeQRGenerator();
+      });
+    }
   }
 
   // ===== Grade Selection =====
@@ -109,23 +189,30 @@ const App = (function() {
     elements.gradeButtons.forEach(b => b.classList.remove('active'));
     btn.classList.add('active');
     selectedGrade = btn.dataset.grade;
-    elements.gradeCustom.value = '';
   }
 
   // ===== Form Handling =====
   function handleSubmit(e) {
     e.preventDefault();
     
-    const studentId = elements.studentId.value.trim();
-    const activity = elements.activity.value.trim();
-    const grade = selectedGrade || elements.gradeCustom.value.trim();
-    const comment = elements.comment.value.trim();
-    const dateTime = elements.datetime.value;
-    const fileUrl = elements.fileUrl.value.trim();
+    const studentId = elements.studentId ? elements.studentId.value.trim() : '';
+    const activity = elements.activity ? elements.activity.value.trim() : '';
+    const grade = selectedGrade;
+    const comment = elements.comment ? elements.comment.value.trim() : '';
+    const fileUrl = elements.fileUrl ? elements.fileUrl.value.trim() : '';
+    const dateTime = new Date().toISOString(); // Always current time
 
     // Validation
-    if (!studentId || !activity || !grade) {
-      showResult('error', 'Заполните обязательные поля: ИД студента, Активность, Оценка');
+    if (config.fields.includes('studentId') && !studentId) {
+      showResult('error', 'Введите ИД студента');
+      return;
+    }
+    if (config.fields.includes('activity') && !activity) {
+      showResult('error', 'Введите название активности');
+      return;
+    }
+    if (config.fields.includes('grade') && !grade) {
+      showResult('error', 'Выберите оценку (0-5)');
       return;
     }
 
@@ -145,17 +232,26 @@ const App = (function() {
           saveRecords();
           updateUI();
           showResult('success', result.message || 'Запись успешно сохранена!');
+          
+          // Trigger success callback
+          triggerSuccess(record);
+          
           resetForm();
         } else {
           showResult('error', result.message || 'Ошибка при сохранении');
+          triggerError(result.message);
         }
       })
       .catch(error => {
-        // Если сервер недоступен, сохраняем локально
+        // If server unavailable, save locally
         records.push(record);
         saveRecords();
         updateUI();
         showResult('success', 'Запись сохранена локально (сервер недоступен)');
+        
+        // Still trigger success (saved locally)
+        triggerSuccess(record);
+        
         resetForm();
       })
       .finally(() => {
@@ -165,17 +261,60 @@ const App = (function() {
       });
   }
 
+  // ===== Callbacks & Events =====
+  function triggerSuccess(record) {
+    // CustomEvent for parent application
+    const event = new CustomEvent('studentRecordSaved', {
+      detail: { record, success: true },
+      bubbles: true
+    });
+    document.dispatchEvent(event);
+
+    // Callback function if provided
+    if (config.onSuccess && typeof config.onSuccess === 'function') {
+      config.onSuccess(record);
+    }
+
+    // Post message for iframe integration
+    if (window.parent !== window) {
+      window.parent.postMessage({
+        type: 'studentRecordSaved',
+        record: record,
+        success: true
+      }, '*');
+    }
+  }
+
+  function triggerError(message) {
+    const event = new CustomEvent('studentRecordError', {
+      detail: { message, success: false },
+      bubbles: true
+    });
+    document.dispatchEvent(event);
+
+    if (config.onError && typeof config.onError === 'function') {
+      config.onError(message);
+    }
+
+    if (window.parent !== window) {
+      window.parent.postMessage({
+        type: 'studentRecordError',
+        message: message,
+        success: false
+      }, '*');
+    }
+  }
+
   // ===== Server Communication =====
   async function submitToServer(record) {
     const serverUrl = localStorage.getItem('serverUrl');
     if (!serverUrl) {
-      // Если сервер не настроен, просто возвращаем успех (данные сохранятся локально)
       return { success: true, message: 'Запись сохранена локально' };
     }
 
     const token = CryptoModule.generateToken();
     
-    // Формируем CSV строку
+    // Format CSV line
     const csvLine = [
       CryptoModule.escapeCSV(record.studentId),
       CryptoModule.escapeCSV(record.activity),
@@ -185,7 +324,7 @@ const App = (function() {
       CryptoModule.escapeCSV(record.fileUrl)
     ].join(',');
 
-    // Шифруем данные
+    // Encrypt data
     const encryptedData = CryptoModule.encrypt(csvLine);
 
     const response = await fetch(serverUrl + '/api/submit', {
@@ -234,8 +373,9 @@ const App = (function() {
       { facingMode: 'environment' },
       config,
       (decodedText) => {
-        // QR код распознан
-        elements.studentId.value = decodedText;
+        if (elements.studentId) {
+          elements.studentId.value = decodedText;
+        }
         closeQRScanner();
         showResult('success', 'ИД студента считан из QR-кода');
       },
@@ -265,7 +405,9 @@ const App = (function() {
   // ===== QR Generator =====
   function openQRGenerator() {
     elements.qrGeneratorModal.classList.remove('hidden');
-    elements.qrInputId.value = elements.studentId.value || '';
+    if (elements.qrInputId && elements.studentId) {
+      elements.qrInputId.value = elements.studentId.value || '';
+    }
     elements.qrDisplay.classList.add('hidden');
   }
 
@@ -285,10 +427,10 @@ const App = (function() {
       return;
     }
 
-    // Очищаем предыдущий QR
+    // Clear previous QR
     elements.qrcodeCanvas.innerHTML = '';
     
-    // Генерируем новый QR
+    // Generate new QR
     new QRCode(elements.qrcodeCanvas, {
       text: id,
       width: 200,
@@ -305,7 +447,7 @@ const App = (function() {
   // ===== Settings =====
   function loadSettings() {
     const savedUrl = localStorage.getItem('serverUrl');
-    if (savedUrl) {
+    if (savedUrl && elements.serverUrl) {
       elements.serverUrl.value = savedUrl;
     }
   }
@@ -389,10 +531,11 @@ const App = (function() {
   }
 
   function getGradeClass(grade) {
-    if (grade === '5' || grade === 'Зачёт') return 'grade-excellent';
-    if (grade === '4') return 'grade-good';
-    if (grade === '3') return 'grade-satisfactory';
-    return 'grade-poor';
+    const g = parseInt(grade);
+    if (g === 5) return 'grade-excellent';
+    if (g === 4) return 'grade-good';
+    if (g === 3) return 'grade-satisfactory';
+    return 'grade-poor'; // 0, 1, 2
   }
 
   // ===== Export =====
@@ -452,21 +595,12 @@ const App = (function() {
   }
 
   function resetForm() {
-    elements.studentId.value = '';
-    elements.activity.value = '';
-    elements.comment.value = '';
-    elements.fileUrl.value = '';
-    elements.gradeCustom.value = '';
+    if (elements.studentId) elements.studentId.value = '';
+    if (elements.activity) elements.activity.value = '';
+    if (elements.comment) elements.comment.value = '';
+    if (elements.fileUrl) elements.fileUrl.value = '';
     selectedGrade = '';
     elements.gradeButtons.forEach(b => b.classList.remove('active'));
-    setDefaultDateTime();
-  }
-
-  function setDefaultDateTime() {
-    const now = new Date();
-    const offset = now.getTimezoneOffset();
-    const local = new Date(now.getTime() - offset * 60000);
-    elements.datetime.value = local.toISOString().slice(0, 16);
   }
 
   function escapeHtml(text) {
@@ -475,9 +609,29 @@ const App = (function() {
     return div.innerHTML;
   }
 
-  // Public API
+  // ===== Public API =====
   return {
-    init: init
+    init: init,
+    
+    // Programmatic methods
+    setStudentId: function(id) {
+      if (elements.studentId) elements.studentId.value = id;
+    },
+    
+    getRecords: function() {
+      return records;
+    },
+    
+    clearRecords: function() {
+      records = [];
+      saveRecords();
+      updateUI();
+    },
+    
+    setConfig: function(newConfig) {
+      config = { ...config, ...newConfig };
+      applyConfig();
+    }
   };
 })();
 

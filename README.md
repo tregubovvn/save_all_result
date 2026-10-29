@@ -4,7 +4,7 @@
 
 ## 🚀 Возможности
 
-- **Форма ввода**: ИД студента, активность, оценка, комментарий, дата/время, URL файла
+- **Форма ввода**: ИД студента, активность, оценка (0-5), комментарий, дата/время, URL файла
 - **QR-сканирование**: Через камеру устройства (html5-qrcode)
 - **QR-генерация**: Создание QR-кодов для студентов (qrcode.js)
 - **Шифрование**: XOR + Base64 перед отправкой на сервер
@@ -101,6 +101,97 @@ https://your-domain.com
 ```
 
 На мобильных можно добавить на рабочий стол.
+
+## 🔌 Интеграция в другие приложения
+
+Приложение можно встроить в другие HTML-страницы через iframe с гибкой настройкой полей.
+
+### Режимы работы
+
+**Standalone** (полноценное приложение):
+```
+https://your-domain.com
+```
+
+**Embed** (встраиваемый режим без header/footer):
+```
+https://your-domain.com?mode=embed
+```
+
+### Выбор полей
+
+URL-параметр `fields` определяет, какие поля показывать:
+
+```html
+<!-- Только ИД студента с QR -->
+<iframe src="index.html?mode=embed&fields=studentId"></iframe>
+
+<!-- ИД и оценка -->
+<iframe src="index.html?mode=embed&fields=studentId,grade"></iframe>
+
+<!-- Все поля -->
+<iframe src="index.html?mode=embed&fields=studentId,activity,grade,comment,fileUrl"></iframe>
+```
+
+**Доступные поля:**
+- `studentId` — ИД студента (с QR-сканированием)
+- `activity` — Название активности
+- `grade` — Оценка (0-5)
+- `comment` — Комментарий
+- `fileUrl` — URL файла
+
+### Получение событий
+
+Приложение отправляет события через `postMessage` и `CustomEvent`:
+
+```javascript
+// Слушаем события от iframe
+window.addEventListener('message', function(event) {
+  if (event.data.type === 'studentRecordSaved') {
+    console.log('Запись сохранена:', event.data.record);
+    // event.data.record = { studentId, activity, grade, comment, dateTime, fileUrl }
+  }
+  
+  if (event.data.type === 'studentRecordError') {
+    console.error('Ошибка:', event.data.message);
+  }
+});
+```
+
+### Программное управление
+
+```javascript
+const iframe = document.getElementById('student-tracker-frame');
+
+// Установить ИД студента
+iframe.contentWindow.App.setStudentId('STU12345');
+
+// Получить все записи
+const records = iframe.contentWindow.App.getRecords();
+
+// Очистить записи
+iframe.contentWindow.App.clearRecords();
+
+// Изменить конфигурацию
+iframe.contentWindow.App.setConfig({
+  fields: ['studentId', 'grade'],
+  onSuccess: function(record) {
+    console.log('Сохранено:', record);
+  },
+  onError: function(message) {
+    console.error('Ошибка:', message);
+  }
+});
+```
+
+### Полный пример интеграции
+
+См. файл `public/embed-example.html` — демонстрационная страница с:
+- Встроенным приложением (только ИД студента)
+- Логом событий в реальном времени
+- Примерами кода
+
+Откройте `embed-example.html` в браузере для интерактивной демонстрации.
 
 ## 📊 Формат CSV
 
