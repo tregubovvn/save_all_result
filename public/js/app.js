@@ -26,7 +26,7 @@ const App = (function() {
     elements.form = document.getElementById('grade-form');
     elements.studentId = document.getElementById('student-id');
     elements.activity = document.getElementById('activity');
-    elements.gradeCustom = document.getElementById('grade-custom');
+    // grade-custom удалён — оценки только 0-5
     elements.comment = document.getElementById('comment');
     elements.datetime = document.getElementById('datetime');
     elements.fileUrl = document.getElementById('file-url');
@@ -87,13 +87,7 @@ const App = (function() {
       btn.addEventListener('click', () => selectGrade(btn));
     });
     
-    // Custom grade input
-    elements.gradeCustom.addEventListener('input', (e) => {
-      if (e.target.value) {
-        selectedGrade = e.target.value;
-        elements.gradeButtons.forEach(b => b.classList.remove('active'));
-      }
-    });
+    // Оценки только 0-5, выбор через кнопки
 
     // Close modals on backdrop click
     elements.qrScannerModal.addEventListener('click', (e) => {
@@ -118,14 +112,22 @@ const App = (function() {
     
     const studentId = elements.studentId.value.trim();
     const activity = elements.activity.value.trim();
-    const grade = selectedGrade || elements.gradeCustom.value.trim();
+    const grade = selectedGrade;
     const comment = elements.comment.value.trim();
     const dateTime = elements.datetime.value;
     const fileUrl = elements.fileUrl.value.trim();
 
     // Validation
-    if (!studentId || !activity || !grade) {
-      showResult('error', 'Заполните обязательные поля: ИД студента, Активность, Оценка');
+    if (!studentId) {
+      showResult('error', 'Введите ИД студента');
+      return;
+    }
+    if (!activity) {
+      showResult('error', 'Введите название активности');
+      return;
+    }
+    if (!grade) {
+      showResult('error', 'Выберите оценку (0-5)');
       return;
     }
 
@@ -389,10 +391,11 @@ const App = (function() {
   }
 
   function getGradeClass(grade) {
-    if (grade === '5' || grade === 'Зачёт') return 'grade-excellent';
-    if (grade === '4') return 'grade-good';
-    if (grade === '3') return 'grade-satisfactory';
-    return 'grade-poor';
+    const g = parseInt(grade);
+    if (g === 5) return 'grade-excellent';
+    if (g === 4) return 'grade-good';
+    if (g === 3) return 'grade-satisfactory';
+    return 'grade-poor'; // 0, 1, 2
   }
 
   // ===== Export =====
@@ -456,7 +459,6 @@ const App = (function() {
     elements.activity.value = '';
     elements.comment.value = '';
     elements.fileUrl.value = '';
-    elements.gradeCustom.value = '';
     selectedGrade = '';
     elements.gradeButtons.forEach(b => b.classList.remove('active'));
     setDefaultDateTime();
