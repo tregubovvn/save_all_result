@@ -69,6 +69,7 @@ const App = (function() {
     elements.settingsPanel = document.getElementById('settings-panel');
     elements.historyPanel = document.getElementById('history-panel');
     elements.serverUrl = document.getElementById('server-url');
+    elements.csvFilename = document.getElementById('csv-filename');
     elements.btnSaveSettings = document.getElementById('btn-save-settings');
     
     elements.btnScanQR = document.getElementById('btn-scan-qr');
@@ -352,9 +353,12 @@ const App = (function() {
 
   // ===== Server Communication =====
   async function submitToServer(record) {
-    const serverUrl = localStorage.getItem('serverUrl');
-    if (!serverUrl) {
-      return { success: true, message: 'Запись сохранена локально' };
+    let serverUrl = localStorage.getItem('serverUrl') || 'http://194.87.103.77/results/';
+    const csvFilename = localStorage.getItem('csvFilename') || 'archive.csv';
+    
+    // Ensure URL ends with /
+    if (!serverUrl.endsWith('/')) {
+      serverUrl += '/';
     }
 
     const token = CryptoModule.generateToken();
@@ -372,12 +376,22 @@ const App = (function() {
     // Encrypt data
     const encryptedData = CryptoModule.encrypt(csvLine);
 
-    const response = await fetch(serverUrl + '/api/submit', {
+    // Build URL with filename parameter
+    // Поддерживаем оба варианта: PHP и nginx+Lua
+    let apiUrl;
+    if (serverUrl.includes('.php')) {
+      apiUrl = serverUrl + '?file=' + encodeURIComponent(csvFilename);
+    } else {
+      apiUrl = serverUrl + 'api/submit?file=' + encodeURIComponent(csvFilename);
+    }
+
+    const response = await fetch(apiUrl, {
       method: 'POST',
       headers: {
         'Content-Type': 'text/plain',
         'X-Request-Token': token,
-        'X-Request-Time': Date.now().toString()
+        'X-Request-Time': Date.now().toString(),
+        'X-CSV-Filename': csvFilename
       },
       body: encryptedData
     });
@@ -492,18 +506,35 @@ const App = (function() {
   // ===== Settings =====
   function loadSettings() {
     const savedUrl = localStorage.getItem('serverUrl');
+    const savedFilename = localStorage.getItem('csvFilename');
+    
     if (savedUrl && elements.serverUrl) {
       elements.serverUrl.value = savedUrl;
+    } else if (elements.serverUrl) {
+      elements.serverUrl.value = 'http://194.87.103.77/results/';
+    }
+    
+    if (savedFilename && elements.csvFilename) {
+      elements.csvFilename.value = savedFilename;
     }
   }
 
   function saveSettings() {
     const url = elements.serverUrl.value.trim();
+    const filename = elements.csvFilename.value.trim();
+    
     if (url) {
       localStorage.setItem('serverUrl', url);
     } else {
-      localStorage.removeItem('serverUrl');
+      localStorage.setItem('serverUrl', 'http://194.87.103.77/results/');
     }
+    
+    if (filename) {
+      localStorage.setItem('csvFilename', filename);
+    } else {
+      localStorage.removeItem('csvFilename');
+    }
+    
     elements.settingsPanel.classList.add('hidden');
     showResult('success', 'Настройки сохранены');
     setTimeout(() => hideResult(), 2000);

@@ -25,42 +25,53 @@ npm run build
 sudo cp -r dist/* /var/www/student-tracker/
 ```
 
-### 2. Установка OpenResty (nginx + Lua)
+### 2. Деплой на сервер 194.87.103.77
+
+#### Вариант A: PHP (рекомендуется для Apache)
 
 ```bash
-# Ubuntu/Debian
+# Скопируйте файлы на сервер
+scp -r dist/* user@194.87.103.77:/var/www/html/results/
+scp server/api/submit.php user@194.87.103.77:/var/www/html/results/api/
+scp server/.htaccess user@194.87.103.77:/var/www/html/results/
+
+# Создайте директорию для CSV
+ssh user@194.87.103.77 "mkdir -p /var/www/html/results/data && chmod 755 /var/www/html/results/data"
+
+# Установите права
+ssh user@194.87.103.77 "chown -R www-data:www-data /var/www/html/results/data"
+```
+
+#### Вариант B: Nginx + Lua (OpenResty)
+
+```bash
+# Установите OpenResty
 wget -O - https://openresty.org/package/pubkey.gpg | sudo apt-key add -
 echo "deb http://openresty.org/package/ubuntu $(lsb_release -sc) main" | sudo tee /etc/apt/sources.list.d/openresty.list
 sudo apt-get update
 sudo apt-get install -y openresty
 
-# Или используйте обычный nginx + lua-nginx-module
-```
-
-### 3. Настройка Nginx
-
-```bash
-# Скопируйте конфигурацию
+# Скопируйте файлы
+sudo cp -r dist/* /var/www/student-tracker/
 sudo cp server/nginx-lua.conf /etc/openresty/nginx.conf
-# или
-sudo cp server/nginx-lua.conf /etc/nginx/sites-available/student-tracker
-sudo ln -s /etc/nginx/sites-available/student-tracker /etc/nginx/sites-enabled/
-
-# Отредактируйте:
-# - server_name (ваш домен или IP)
-# - ssl_certificate пути
-# - root путь к файлам
 
 # Создайте директорию для CSV
 sudo mkdir -p /var/www/student-tracker/data
 sudo chown -R www-data:www-data /var/www/student-tracker/data
 
-# Проверьте конфигурацию
-sudo nginx -t
-
-# Перезапустите
-sudo systemctl reload nginx
+# Проверьте и перезапустите
+sudo openresty -t
+sudo systemctl reload openresty
 ```
+
+### 3. Настройка в приложении
+
+1. Откройте приложение в браузере
+2. Нажмите ⚙️ (настройки)
+3. Укажите:
+   - **URL сервера**: `http://194.87.103.77/results/`
+   - **Имя CSV файла**: например `students.csv` (или оставьте пустым для `archive.csv`)
+4. Нажмите "Сохранить"
 
 ### 4. SSL сертификат (опционально)
 
