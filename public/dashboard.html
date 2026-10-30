@@ -1,0 +1,620 @@
+<!DOCTYPE html>
+<html lang="ru">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>Аналитика оценок</title>
+  <style>
+    * { margin: 0; padding: 0; box-sizing: border-box; }
+    body {
+      font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, sans-serif;
+      background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
+      min-height: 100vh;
+      padding: 20px;
+    }
+    .container {
+      max-width: 1400px;
+      margin: 0 auto;
+    }
+    .header {
+      background: white;
+      border-radius: 20px;
+      padding: 30px;
+      margin-bottom: 20px;
+      box-shadow: 0 10px 40px rgba(0,0,0,0.2);
+    }
+    .header h1 {
+      color: #333;
+      font-size: 32px;
+      margin-bottom: 10px;
+    }
+    .header p {
+      color: #666;
+      font-size: 16px;
+    }
+    .tabs {
+      display: flex;
+      gap: 10px;
+      margin-bottom: 20px;
+    }
+    .tab {
+      padding: 12px 24px;
+      background: white;
+      border: none;
+      border-radius: 10px;
+      font-size: 16px;
+      font-weight: 600;
+      cursor: pointer;
+      transition: all 0.3s;
+      color: #666;
+    }
+    .tab:hover {
+      background: #f0f0f0;
+    }
+    .tab.active {
+      background: #667eea;
+      color: white;
+    }
+    .filters {
+      background: white;
+      border-radius: 15px;
+      padding: 20px;
+      margin-bottom: 20px;
+      box-shadow: 0 5px 20px rgba(0,0,0,0.1);
+    }
+    .filter-row {
+      display: flex;
+      gap: 15px;
+      flex-wrap: wrap;
+      align-items: flex-end;
+    }
+    .filter-group {
+      flex: 1;
+      min-width: 200px;
+    }
+    .filter-group label {
+      display: block;
+      margin-bottom: 8px;
+      color: #555;
+      font-weight: 600;
+      font-size: 14px;
+    }
+    .filter-group input, .filter-group select {
+      width: 100%;
+      padding: 10px 15px;
+      border: 2px solid #e0e0e0;
+      border-radius: 8px;
+      font-size: 14px;
+    }
+    .filter-group input:focus, .filter-group select:focus {
+      outline: none;
+      border-color: #667eea;
+    }
+    .btn {
+      padding: 12px 24px;
+      border: none;
+      border-radius: 8px;
+      font-size: 14px;
+      font-weight: 600;
+      cursor: pointer;
+      transition: all 0.3s;
+    }
+    .btn-primary {
+      background: #667eea;
+      color: white;
+    }
+    .btn-primary:hover {
+      background: #5568d3;
+    }
+    .btn-success {
+      background: #28a745;
+      color: white;
+    }
+    .btn-success:hover {
+      background: #218838;
+    }
+    .content {
+      background: white;
+      border-radius: 15px;
+      padding: 30px;
+      box-shadow: 0 5px 20px rgba(0,0,0,0.1);
+    }
+    .stats {
+      display: grid;
+      grid-template-columns: repeat(auto-fit, minmax(200px, 1fr));
+      gap: 20px;
+      margin-bottom: 30px;
+    }
+    .stat-card {
+      background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
+      color: white;
+      padding: 20px;
+      border-radius: 12px;
+      text-align: center;
+    }
+    .stat-value {
+      font-size: 36px;
+      font-weight: 700;
+      margin-bottom: 5px;
+    }
+    .stat-label {
+      font-size: 14px;
+      opacity: 0.9;
+    }
+    .table-container {
+      overflow-x: auto;
+    }
+    table {
+      width: 100%;
+      border-collapse: collapse;
+    }
+    th {
+      background: #f8f9fa;
+      padding: 15px;
+      text-align: left;
+      font-weight: 600;
+      color: #333;
+      border-bottom: 2px solid #e0e0e0;
+    }
+    td {
+      padding: 12px 15px;
+      border-bottom: 1px solid #f0f0f0;
+    }
+    tr:hover {
+      background: #f8f9fa;
+    }
+    .grade-badge {
+      display: inline-block;
+      padding: 4px 12px;
+      border-radius: 20px;
+      font-weight: 600;
+      font-size: 14px;
+    }
+    .grade-5 { background: #d4edda; color: #155724; }
+    .grade-4 { background: #cce5ff; color: #004085; }
+    .grade-3 { background: #fff3cd; color: #856404; }
+    .grade-2 { background: #f8d7da; color: #721c24; }
+    .grade-1 { background: #f8d7da; color: #721c24; }
+    .grade-0 { background: #f8d7da; color: #721c24; }
+    .group-header {
+      background: #667eea !important;
+      color: white !important;
+      font-weight: 700;
+      font-size: 16px;
+    }
+    .group-header td {
+      color: white;
+      border-bottom: 2px solid #5568d3;
+    }
+    .loading {
+      text-align: center;
+      padding: 40px;
+      color: #666;
+    }
+    .loading i {
+      font-size: 48px;
+      margin-bottom: 15px;
+      animation: spin 1s linear infinite;
+    }
+    @keyframes spin {
+      from { transform: rotate(0deg); }
+      to { transform: rotate(360deg); }
+    }
+    .empty {
+      text-align: center;
+      padding: 60px 20px;
+      color: #999;
+    }
+    .empty i {
+      font-size: 64px;
+      margin-bottom: 20px;
+      opacity: 0.3;
+    }
+    .student-summary {
+      background: #f8f9fa;
+      padding: 15px;
+      border-radius: 8px;
+      margin-bottom: 20px;
+    }
+    .student-summary h3 {
+      color: #333;
+      margin-bottom: 10px;
+    }
+    .summary-stats {
+      display: flex;
+      gap: 20px;
+      flex-wrap: wrap;
+    }
+    .summary-stat {
+      flex: 1;
+      min-width: 150px;
+    }
+    .summary-stat-value {
+      font-size: 24px;
+      font-weight: 700;
+      color: #667eea;
+    }
+    .summary-stat-label {
+      font-size: 12px;
+      color: #666;
+    }
+  </style>
+  <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.4.0/css/all.min.css" />
+</head>
+<body>
+  <div class="container">
+    <div class="header">
+      <h1><i class="fas fa-chart-bar"></i> Аналитика оценок</h1>
+      <p>Просмотр и анализ данных студентов</p>
+    </div>
+
+    <div class="tabs">
+      <button class="tab active" onclick="switchTab('byDate')">
+        <i class="fas fa-calendar"></i> По датам
+      </button>
+      <button class="tab" onclick="switchTab('byStudent')">
+        <i class="fas fa-user"></i> По студентам
+      </button>
+    </div>
+
+    <div class="filters">
+      <div class="filter-row">
+        <div class="filter-group">
+          <label>Дата с</label>
+          <input type="date" id="dateFrom">
+        </div>
+        <div class="filter-group">
+          <label>Дата по</label>
+          <input type="date" id="dateTo">
+        </div>
+        <div class="filter-group">
+          <label>Студент</label>
+          <select id="studentFilter">
+            <option value="">Все студенты</option>
+          </select>
+        </div>
+        <div class="filter-group">
+          <label>Активность</label>
+          <select id="activityFilter">
+            <option value="">Все активности</option>
+          </select>
+        </div>
+        <button class="btn btn-primary" onclick="applyFilters()">
+          <i class="fas fa-filter"></i> Применить
+        </button>
+        <button class="btn btn-success" onclick="exportCSV()">
+          <i class="fas fa-download"></i> Экспорт CSV
+        </button>
+      </div>
+    </div>
+
+    <div class="content" id="content">
+      <div class="loading">
+        <i class="fas fa-spinner"></i>
+        <p>Загрузка данных...</p>
+      </div>
+    </div>
+  </div>
+
+  <script>
+    const SUPABASE_URL = 'https://nfoynqfjkvgtqsgwxves.supabase.co';
+    const SUPABASE_KEY = 'eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6Im5mb3lucWZqa3ZndHFzZ3d4dmVzIiwicm9sZSI6ImFub24iLCJpYXQiOjE3OTMzNzc3NDUsImV4cCI6MjEwODk1Mzc0NX0.SR2krMy390zOPeVwUjdBAhufwcj57Kk8VQXqFBu3Fdo';
+
+    let allRecords = [];
+    let currentTab = 'byDate';
+
+    // Загрузка данных
+    async function loadData() {
+      try {
+        const response = await fetch(`${SUPABASE_URL}/rest/v1/records?select=*&order=date_time.desc`, {
+          headers: {
+            'apikey': SUPABASE_KEY,
+            'Authorization': `Bearer ${SUPABASE_KEY}`
+          }
+        });
+
+        if (!response.ok) throw new Error('Ошибка загрузки данных');
+
+        allRecords = await response.json();
+        updateFilters();
+        renderContent();
+      } catch (error) {
+        document.getElementById('content').innerHTML = `
+          <div class="empty">
+            <i class="fas fa-exclamation-triangle"></i>
+            <h3>Ошибка загрузки данных</h3>
+            <p>${error.message}</p>
+          </div>
+        `;
+      }
+    }
+
+    // Обновление фильтров
+    function updateFilters() {
+      const students = [...new Set(allRecords.map(r => r.student_id))].sort();
+      const activities = [...new Set(allRecords.map(r => r.activity))].sort();
+
+      const studentSelect = document.getElementById('studentFilter');
+      studentSelect.innerHTML = '<option value="">Все студенты</option>' +
+        students.map(s => `<option value="${s}">${s}</option>`).join('');
+
+      const activitySelect = document.getElementById('activityFilter');
+      activitySelect.innerHTML = '<option value="">Все активности</option>' +
+        activities.map(a => `<option value="${a}">${a}</option>`).join('');
+    }
+
+    // Применение фильтров
+    function applyFilters() {
+      renderContent();
+    }
+
+    // Получение отфильтрованных данных
+    function getFilteredRecords() {
+      const dateFrom = document.getElementById('dateFrom').value;
+      const dateTo = document.getElementById('dateTo').value;
+      const student = document.getElementById('studentFilter').value;
+      const activity = document.getElementById('activityFilter').value;
+
+      return allRecords.filter(r => {
+        if (dateFrom && new Date(r.date_time) < new Date(dateFrom)) return false;
+        if (dateTo && new Date(r.date_time) > new Date(dateTo + 'T23:59:59')) return false;
+        if (student && r.student_id !== student) return false;
+        if (activity && r.activity !== activity) return false;
+        return true;
+      });
+    }
+
+    // Переключение вкладок
+    function switchTab(tab) {
+      currentTab = tab;
+      document.querySelectorAll('.tab').forEach(t => t.classList.remove('active'));
+      event.target.closest('.tab').classList.add('active');
+      renderContent();
+    }
+
+    // Рендер контента
+    function renderContent() {
+      const records = getFilteredRecords();
+
+      if (records.length === 0) {
+        document.getElementById('content').innerHTML = `
+          <div class="empty">
+            <i class="fas fa-inbox"></i>
+            <h3>Нет данных</h3>
+            <p>Попробуйте изменить фильтры</p>
+          </div>
+        `;
+        return;
+      }
+
+      if (currentTab === 'byDate') {
+        renderByDate(records);
+      } else {
+        renderByStudent(records);
+      }
+    }
+
+    // Рендер по датам с группировкой по студентам
+    function renderByDate(records) {
+      // Группировка по датам
+      const byDate = {};
+      records.forEach(r => {
+        const date = new Date(r.date_time).toLocaleDateString('ru-RU');
+        if (!byDate[date]) byDate[date] = [];
+        byDate[date].push(r);
+      });
+
+      // Статистика
+      const stats = calculateStats(records);
+
+      let html = `
+        <div class="stats">
+          <div class="stat-card">
+            <div class="stat-value">${stats.total}</div>
+            <div class="stat-label">Всего записей</div>
+          </div>
+          <div class="stat-card">
+            <div class="stat-value">${stats.students}</div>
+            <div class="stat-label">Студентов</div>
+          </div>
+          <div class="stat-card">
+            <div class="stat-value">${stats.avgGrade}</div>
+            <div class="stat-label">Средняя оценка</div>
+          </div>
+          <div class="stat-card">
+            <div class="stat-value">${stats.activities}</div>
+            <div class="stat-label">Активностей</div>
+          </div>
+        </div>
+
+        <div class="table-container">
+          <table>
+            <thead>
+              <tr>
+                <th>Дата</th>
+                <th>Студент</th>
+                <th>Активность</th>
+                <th>Оценка</th>
+                <th>Комментарий</th>
+              </tr>
+            </thead>
+            <tbody>
+      `;
+
+      // Сортируем даты
+      const sortedDates = Object.keys(byDate).sort((a, b) => {
+        const [d1, m1, y1] = a.split('.');
+        const [d2, m2, y2] = b.split('.');
+        return new Date(y2, m2-1, d2) - new Date(y1, m1-1, d1);
+      });
+
+      sortedDates.forEach(date => {
+        html += `
+          <tr class="group-header">
+            <td colspan="5">
+              <i class="fas fa-calendar-day"></i> ${date} (${byDate[date].length} записей)
+            </td>
+          </tr>
+        `;
+
+        // Группируем по студентам внутри даты
+        const byStudent = {};
+        byDate[date].forEach(r => {
+          if (!byStudent[r.student_id]) byStudent[r.student_id] = [];
+          byStudent[r.student_id].push(r);
+        });
+
+        Object.keys(byStudent).sort().forEach(studentId => {
+          byStudent[studentId].forEach(r => {
+            html += `
+              <tr>
+                <td>${new Date(r.date_time).toLocaleTimeString('ru-RU', {hour: '2-digit', minute: '2-digit'})}</td>
+                <td><strong>${r.student_id}</strong></td>
+                <td>${r.activity}</td>
+                <td><span class="grade-badge grade-${r.grade}">${r.grade}</span></td>
+                <td>${r.comment || '-'}</td>
+              </tr>
+            `;
+          });
+        });
+      });
+
+      html += '</tbody></table></div>';
+      document.getElementById('content').innerHTML = html;
+    }
+
+    // Рендер по студентам
+    function renderByStudent(records) {
+      // Группировка по студентам
+      const byStudent = {};
+      records.forEach(r => {
+        if (!byStudent[r.student_id]) byStudent[r.student_id] = [];
+        byStudent[r.student_id].push(r);
+      });
+
+      // Статистика
+      const stats = calculateStats(records);
+
+      let html = `
+        <div class="stats">
+          <div class="stat-card">
+            <div class="stat-value">${stats.total}</div>
+            <div class="stat-label">Всего записей</div>
+          </div>
+          <div class="stat-card">
+            <div class="stat-value">${stats.students}</div>
+            <div class="stat-label">Студентов</div>
+          </div>
+          <div class="stat-card">
+            <div class="stat-value">${stats.avgGrade}</div>
+            <div class="stat-label">Средняя оценка</div>
+          </div>
+          <div class="stat-card">
+            <div class="stat-value">${stats.activities}</div>
+            <div class="stat-label">Активностей</div>
+          </div>
+        </div>
+      `;
+
+      // Для каждого студента
+      Object.keys(byStudent).sort().forEach(studentId => {
+        const studentRecords = byStudent[studentId];
+        const studentStats = calculateStats(studentRecords);
+
+        html += `
+          <div class="student-summary">
+            <h3><i class="fas fa-user"></i> ${studentId}</h3>
+            <div class="summary-stats">
+              <div class="summary-stat">
+                <div class="summary-stat-value">${studentStats.total}</div>
+                <div class="summary-stat-label">Записей</div>
+              </div>
+              <div class="summary-stat">
+                <div class="summary-stat-value">${studentStats.avgGrade}</div>
+                <div class="summary-stat-label">Средняя оценка</div>
+              </div>
+              <div class="summary-stat">
+                <div class="summary-stat-value">${studentStats.activities}</div>
+                <div class="summary-stat-label">Активностей</div>
+              </div>
+            </div>
+          </div>
+
+          <div class="table-container">
+            <table>
+              <thead>
+                <tr>
+                  <th>Дата</th>
+                  <th>Активность</th>
+                  <th>Оценка</th>
+                  <th>Комментарий</th>
+                </tr>
+              </thead>
+              <tbody>
+        `;
+
+        studentRecords.forEach(r => {
+          html += `
+            <tr>
+              <td>${new Date(r.date_time).toLocaleString('ru-RU')}</td>
+              <td>${r.activity}</td>
+              <td><span class="grade-badge grade-${r.grade}">${r.grade}</span></td>
+              <td>${r.comment || '-'}</td>
+            </tr>
+          `;
+        });
+
+        html += '</tbody></table></div><br>';
+      });
+
+      document.getElementById('content').innerHTML = html;
+    }
+
+    // Подсчет статистики
+    function calculateStats(records) {
+      const total = records.length;
+      const students = new Set(records.map(r => r.student_id)).size;
+      const activities = new Set(records.map(r => r.activity)).size;
+      
+      const grades = records.map(r => parseInt(r.grade)).filter(g => !isNaN(g));
+      const avgGrade = grades.length > 0 
+        ? (grades.reduce((a, b) => a + b, 0) / grades.length).toFixed(2)
+        : '0';
+
+      return { total, students, activities, avgGrade };
+    }
+
+    // Экспорт в CSV
+    function exportCSV() {
+      const records = getFilteredRecords();
+      if (records.length === 0) {
+        alert('Нет данных для экспорта');
+        return;
+      }
+
+      const headers = ['Student ID', 'Activity', 'Grade', 'Comment', 'Date/Time'];
+      const csvContent = [
+        '\uFEFF' + headers.join(','),
+        ...records.map(r => [
+          `"${r.student_id}"`,
+          `"${r.activity}"`,
+          `"${r.grade}"`,
+          `"${r.comment || ''}"`,
+          `"${new Date(r.date_time).toLocaleString('ru-RU')}"`
+        ].join(','))
+      ].join('\n');
+
+      const blob = new Blob([csvContent], { type: 'text/csv;charset=utf-8;' });
+      const url = URL.createObjectURL(blob);
+      const link = document.createElement('a');
+      link.href = url;
+      link.download = `student_records_${new Date().toISOString().slice(0, 10)}.csv`;
+      link.click();
+      URL.revokeObjectURL(url);
+    }
+
+    // Инициализация
+    loadData();
+  </script>
+</body>
+</html>
