@@ -37,6 +37,12 @@ CREATE POLICY "Allow anonymous reads"
   ON records FOR SELECT
   TO anon
   USING (true);
+
+-- Политика: разрешить удаление всем (опционально)
+CREATE POLICY "Allow anonymous deletes"
+  ON records FOR DELETE
+  TO anon
+  USING (true);
 ```
 
 ## Шаг 2: Получение API ключа

@@ -385,6 +385,50 @@
         });
       }
 
+      // Проверка ограничения по времени (10 минут между записями для одного студента)
+      async function checkTimeLimit(studentId) {
+        try {
+          // Получаем последнюю запись для этого студента
+          const url = `${config.supabaseUrl}/rest/v1/records?student_id=eq.${encodeURIComponent(studentId)}&order=date_time.desc&limit=1&apikey=${encodeURIComponent(config.supabaseKey)}`;
+          
+          const response = await fetch(url, {
+            headers: {
+              'apikey': config.supabaseKey,
+              'Authorization': `Bearer ${config.supabaseKey}`
+            }
+          });
+
+          if (!response.ok) {
+            console.warn('Не удалось проверить ограничение по времени');
+            return { allowed: true };
+          }
+
+          const records = await response.json();
+          
+          if (records.length === 0) {
+            return { allowed: true };
+          }
+
+          const lastRecord = records[0];
+          const lastTime = new Date(lastRecord.date_time).getTime();
+          const now = Date.now();
+          const diffMinutes = (now - lastTime) / (1000 * 60);
+
+          if (diffMinutes < 10) {
+            const remainingMinutes = Math.ceil(10 - diffMinutes);
+            return {
+              allowed: false,
+              message: `Для студента ${studentId} можно сохранять записи не чаще раза в 10 минут. Подождите ещё ${remainingMinutes} мин.`
+            };
+          }
+
+          return { allowed: true };
+        } catch (error) {
+          console.warn('Ошибка проверки ограничения:', error);
+          return { allowed: true }; // Если ошибка - разрешаем
+        }
+      }
+
       // Отправка формы
       async function handleSubmit(e) {
         e.preventDefault();
@@ -397,7 +441,7 @@
 
         const btn = document.getElementById('submitBtn');
         btn.disabled = true;
-        btn.textContent = 'Отправка...';
+        btn.textContent = 'Проверка...';
 
         // Собираем данные
         const data = {
@@ -407,6 +451,17 @@
           comment: getFieldValue('comment'),
           date_time: new Date().toISOString()
         };
+
+        // Проверка ограничения по времени
+        const timeCheck = await checkTimeLimit(data.student_id);
+        if (!timeCheck.allowed) {
+          showMessage(timeCheck.message, 'error');
+          btn.disabled = false;
+          btn.textContent = 'Отправить';
+          return;
+        }
+
+        btn.textContent = 'Отправка...';
 
         try {
           // Проверка что ключ установлен
