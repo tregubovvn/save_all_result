@@ -420,8 +420,9 @@
             keyLength: config.supabaseKey.length
           });
 
-          // Отправка в Supabase
-          const response = await fetch(`${config.supabaseUrl}/rest/v1/records`, {
+          // Отправка в Supabase с ключом в URL и заголовках
+          const url = `${config.supabaseUrl}/rest/v1/records?apikey=${encodeURIComponent(config.supabaseKey)}`;
+          const response = await fetch(url, {
             method: 'POST',
             headers: {
               'Content-Type': 'application/json',
