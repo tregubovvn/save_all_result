@@ -201,47 +201,8 @@
       <button type="submit" class="submit-btn" id="submitBtn">Отправить</button>
     </form>
 
-    <div style="margin-top: 20px; display: flex; gap: 10px;">
-      <button type="button" class="submit-btn" style="background: #28a745;" onclick="StudentTracker.exportCSV()">
-        📥 Экспорт CSV
-      </button>
-      <button type="button" class="submit-btn" style="background: #17a2b8;" onclick="showRecords()">
-        📋 Записи (<span id="recordCount">0</span>)
-      </button>
-    </div>
-
     <div id="message" class="message"></div>
   </div>
-
-  <script>
-    function showRecords() {
-      const records = StudentTracker.getLocalRecords();
-      if (records.length === 0) {
-        alert('Нет сохранённых записей');
-        return;
-      }
-      
-      let text = 'Сохранённые записи:\n\n';
-      records.forEach((r, i) => {
-        text += `${i + 1}. ${r.studentId} | ${r.activity} | Оценка: ${r.grade}\n`;
-        if (r.comment) text += `   Комментарий: ${r.comment}\n`;
-        text += `   Дата: ${new Date(r.dateTime).toLocaleString('ru-RU')}\n\n`;
-      });
-      
-      alert(text);
-    }
-
-    // Обновляем счётчик записей
-    function updateRecordCount() {
-      const count = StudentTracker.getLocalRecords().length;
-      const el = document.getElementById('recordCount');
-      if (el) el.textContent = count;
-    }
-
-    // Обновляем счётчик при загрузке и после сохранения
-    document.addEventListener('DOMContentLoaded', updateRecordCount);
-    document.addEventListener('studentRecordSaved', updateRecordCount);
-  </script>
 
   <script src="https://unpkg.com/html5-qrcode@2.3.8/html5-qrcode.min.js"></script>
   <script>
@@ -254,7 +215,7 @@
       let config = {
         fields: ['studentId', 'activity', 'grade', 'comment'],
         mode: 'standalone', // 'standalone' | 'embed'
-        serverUrl: 'http://194.87.103.77/api/submit',
+        serverUrl: '/api/submit',
         onSuccess: null,
         onError: null,
         defaultValues: {}
@@ -449,91 +410,42 @@
           });
 
           if (response.ok) {
-            showMessage('✓ Запись сохранена на сервере!', 'success');
-            handleSuccess(data);
+            showMessage('✓ Запись сохранена!', 'success');
+            
+            // Вызываем callback
+            if (config.onSuccess && typeof config.onSuccess === 'function') {
+              config.onSuccess(data);
+            }
+            
+            // Отправляем событие
+            const event = new CustomEvent('studentRecordSaved', {
+              detail: { record: data, success: true },
+              bubbles: true
+            });
+            document.dispatchEvent(event);
+            
+            // PostMessage для iframe
+            if (window.parent !== window) {
+              window.parent.postMessage({
+                type: 'studentRecordSaved',
+                record: data,
+                success: true
+              }, '*');
+            }
+            
+            // Сброс формы
+            resetForm();
           } else {
-            throw new Error('Server error');
+            showMessage('Ошибка сохранения', 'error');
+            triggerError('Server error');
           }
         } catch (error) {
-          // Если сервер недоступен, сохраняем локально
-          console.log('Сервер недоступен, сохраняем локально');
-          saveToLocal(data);
-          showMessage('✓ Запись сохранена локально!', 'success');
-          handleSuccess(data);
+          showMessage('Ошибка соединения с сервером', 'error');
+          triggerError(error.message);
         }
 
         btn.disabled = false;
         btn.textContent = 'Отправить';
-      }
-
-      // Обработка успешного сохранения
-      function handleSuccess(data) {
-        // Вызываем callback
-        if (config.onSuccess && typeof config.onSuccess === 'function') {
-          config.onSuccess(data);
-        }
-        
-        // Отправляем событие
-        const event = new CustomEvent('studentRecordSaved', {
-          detail: { record: data, success: true },
-          bubbles: true
-        });
-        document.dispatchEvent(event);
-        
-        // PostMessage для iframe
-        if (window.parent !== window) {
-          window.parent.postMessage({
-            type: 'studentRecordSaved',
-            record: data,
-            success: true
-          }, '*');
-        }
-        
-        // Сброс формы
-        resetForm();
-      }
-
-      // Сохранение в localStorage
-      function saveToLocal(data) {
-        const records = JSON.parse(localStorage.getItem('studentRecords') || '[]');
-        records.push(data);
-        localStorage.setItem('studentRecords', JSON.stringify(records));
-      }
-
-      // Получение записей из localStorage
-      function getLocalRecords() {
-        return JSON.parse(localStorage.getItem('studentRecords') || '[]');
-      }
-
-      // Экспорт в CSV
-      function exportCSV() {
-        const records = getLocalRecords();
-        if (records.length === 0) {
-          showMessage('Нет записей для экспорта', 'error');
-          return;
-        }
-
-        const headers = ['Student ID', 'Activity', 'Grade', 'Comment', 'Date/Time'];
-        const csvContent = [
-          headers.join(','),
-          ...records.map(r => [
-            `"${r.studentId}"`,
-            `"${r.activity}"`,
-            `"${r.grade}"`,
-            `"${r.comment}"`,
-            `"${r.dateTime}"`
-          ].join(','))
-        ].join('\n');
-
-        const blob = new Blob(['\uFEFF' + csvContent], { type: 'text/csv;charset=utf-8;' });
-        const url = URL.createObjectURL(blob);
-        const link = document.createElement('a');
-        link.href = url;
-        link.download = `student_records_${new Date().toISOString().slice(0, 10)}.csv`;
-        link.click();
-        URL.revokeObjectURL(url);
-        
-        showMessage(`✓ Экспортировано ${records.length} записей`, 'success');
       }
 
       // Сброс формы
@@ -583,8 +495,6 @@
         setGrade,
         scanQR,
         resetForm,
-        exportCSV,
-        getLocalRecords,
         getConfig: () => config,
         setConfig: (newConfig) => {
           config = { ...config, ...newConfig };
