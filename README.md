@@ -1,8 +1,152 @@
-# Student Tracker (PHP версия)
+# Student Tracker
 
 Простое приложение для записи оценок студентов в CSV файл. Работает с nginx + PHP-FPM.
 
-## Структура
+## 🚀 Быстрый старт
+
+### Установка на сервер
+
+```bash
+# 1. Установите nginx и PHP-FPM
+apt-get update
+apt-get install -y nginx php-fpm
+
+# 2. Создайте директорию
+mkdir -p /var/www/html/results/api
+
+# 3. Скопируйте файлы
+cp dist/index.html /var/www/html/results/
+cp server/api/submit.php /var/www/html/results/api/
+
+# 4. Создайте конфигурацию nginx
+cp server/nginx-php.conf /etc/nginx/conf.d/student-tracker.conf
+
+# 5. Найдите сокет PHP-FPM
+ls /var/run/php/
+# Отредактируйте fastcgi_pass в конфигурации
+
+# 6. Настройте права
+chmod 777 /var/www/html/results
+chmod 777 /var/www/html/results/api
+
+# 7. Перезапустите nginx
+nginx -t && systemctl reload nginx
+```
+
+### Использование
+
+1. Откройте `http://194.87.103.77/` в браузере
+2. Заполните форму и нажмите "Отправить"
+3. Данные сохраняются в `/var/www/html/results/archive.csv`
+
+## 🔌 Интеграция в другие приложения
+
+Приложение можно встраивать в другие HTML-страницы через iframe с гибкой настройкой полей.
+
+### Способ 1: URL параметры
+
+```html
+<!-- Только ИД студента -->
+<iframe src="index.html?mode=embed&fields=studentId"></iframe>
+
+<!-- ИД и оценка -->
+<iframe src="index.html?mode=embed&fields=studentId,grade"></iframe>
+
+<!-- Все поля -->
+<iframe src="index.html?mode=embed&fields=studentId,activity,grade,comment"></iframe>
+```
+
+**Доступные поля:**
+- `studentId` — ИД студента (с QR-сканированием)
+- `activity` — Название активности
+- `grade` — Оценка (0-5)
+- `comment` — Комментарий
+
+**Параметры:**
+- `mode=embed` — компактный режим без заголовка и фона
+- `fields=...` — список полей через запятую
+- `server=...` — URL API (по умолчанию `/api/submit`)
+
+### Способ 2: Значения по умолчанию через URL
+
+```html
+<iframe src="index.html?mode=embed&fields=studentId,grade&studentId=STU001&grade=5"></iframe>
+```
+
+### Способ 3: Программное управление
+
+```javascript
+const iframe = document.getElementById('myIframe');
+const tracker = iframe.contentWindow.StudentTracker;
+
+// Установить значение поля
+tracker.setFieldValue('studentId', 'STU12345');
+tracker.setGrade('5');
+
+// Получить значение
+const grade = tracker.getFieldValue('grade');
+
+// Сбросить форму
+tracker.resetForm();
+
+// Изменить конфигурацию
+tracker.setConfig({
+  fields: ['studentId', 'grade'],
+  mode: 'embed',
+  onSuccess: (record) => {
+    console.log('Запись сохранена:', record);
+  },
+  onError: (error) => {
+    console.error('Ошибка:', error);
+  }
+});
+```
+
+### Способ 4: Обработка событий
+
+**Через CustomEvent:**
+```javascript
+document.addEventListener('studentRecordSaved', (e) => {
+  console.log('Запись сохранена:', e.detail.record);
+});
+
+document.addEventListener('studentRecordError', (e) => {
+  console.error('Ошибка:', e.detail.message);
+});
+```
+
+**Через postMessage (для iframe):**
+```javascript
+window.addEventListener('message', (e) => {
+  if (e.data.type === 'studentRecordSaved') {
+    console.log('Запись:', e.data.record);
+  } else if (e.data.type === 'studentRecordError') {
+    console.error('Ошибка:', e.data.message);
+  }
+});
+```
+
+### Полный пример интеграции
+
+См. файл `public/embed-example.html` — демонстрационная страница с примерами использования.
+
+```bash
+# Скопируйте на сервер
+scp public/embed-example.html root@194.87.103.77:/var/www/html/results/
+```
+
+Откройте: `http://194.87.103.77/embed-example.html`
+
+## 📊 Формат данных
+
+Данные сохраняются в CSV файл с UTF-8 BOM (для корректного отображения русского языка в Excel):
+
+```csv
+Student ID,Activity,Grade,Comment,Date/Time
+"STU001","Лабораторная работа","5","Отличная работа","2024-01-15T10:30:00.000Z"
+```
+
+## 📁 Структура проекта
 
 ```
 ├── index.html              # Приложение (HTML + CSS + JS)
@@ -10,277 +154,145 @@
 │   ├── api/
 │   │   └── submit.php      # PHP скрипт для записи в CSV
 │   └── nginx-php.conf      # Конфигурация nginx
+├── public/
+│   └── embed-example.html  # Пример интеграции
 ├── install-php.sh          # Скрипт автоматической установки
 └── README.md
 ```
 
-## Быстрая установка
+## 🔧 API Reference
 
-### Автоматическая установка (рекомендуется)
+### StudentTracker.setFieldValue(field, value)
+
+Установить значение поля.
+
+**Параметры:**
+- `field` (string) — имя поля: 'studentId', 'activity', 'grade', 'comment'
+- `value` (string) — значение
+
+**Пример:**
+```javascript
+StudentTracker.setFieldValue('studentId', 'STU12345');
+```
+
+### StudentTracker.getFieldValue(field)
+
+Получить значение поля.
+
+**Параметры:**
+- `field` (string) — имя поля
+
+**Возвращает:** string — значение поля
+
+**Пример:**
+```javascript
+const grade = StudentTracker.getFieldValue('grade');
+```
+
+### StudentTracker.setGrade(grade)
+
+Установить оценку (0-5).
+
+**Параметры:**
+- `grade` (string) — оценка: '0', '1', '2', '3', '4', '5'
+
+**Пример:**
+```javascript
+StudentTracker.setGrade('5');
+```
+
+### StudentTracker.scanQR()
+
+Запустить QR-сканер.
+
+**Пример:**
+```javascript
+StudentTracker.scanQR();
+```
+
+### StudentTracker.resetForm()
+
+Сбросить форму и установить значения по умолчанию.
+
+**Пример:**
+```javascript
+StudentTracker.resetForm();
+```
+
+### StudentTracker.getConfig()
+
+Получить текущую конфигурацию.
+
+**Возвращает:** object — текущая конфигурация
+
+**Пример:**
+```javascript
+const config = StudentTracker.getConfig();
+console.log(config.fields);
+```
+
+### StudentTracker.setConfig(newConfig)
+
+Обновить конфигурацию.
+
+**Параметры:**
+- `newConfig` (object) — новые настройки
+
+**Свойства newConfig:**
+- `fields` (array) — список полей для отображения
+- `mode` (string) — 'standalone' или 'embed'
+- `serverUrl` (string) — URL API endpoint
+- `onSuccess` (function) — callback при успешном сохранении
+- `onError` (function) — callback при ошибке
+- `defaultValues` (object) — значения по умолчанию
+
+**Пример:**
+```javascript
+StudentTracker.setConfig({
+  fields: ['studentId', 'grade'],
+  mode: 'embed',
+  defaultValues: {
+    studentId: 'STU001',
+    grade: '5'
+  }
+});
+```
+
+## 🔍 Диагностика
+
+### Проверка работы
 
 ```bash
-# Подключитесь к серверу
-ssh root@194.87.103.77
-
-# Скачайте проект или скопируйте файлы
-cd /root
-git clone <your-repo-url>
-cd student-tracker
-
-# Запустите установку
-sudo bash install-php.sh
-```
-
-Скрипт автоматически:
-- Установит PHP-FPM (если не установлен)
-- Создаст директорию `/var/www/html/results`
-- Скопирует `index.html` и `submit.php`
-- Создаст конфигурацию nginx
-- Настроит права доступа
-- Перезапустит nginx
-
-### Ручная установка
-
-#### 1. Установка PHP-FPM
-
-```bash
-# Ubuntu/Debian
-apt-get update
-apt-get install -y php-fpm php-cli
-
-# CentOS/RHEL
-yum install -y php-fpm php-cli
-```
-
-#### 2. Создание директории
-
-```bash
-mkdir -p /var/www/html/results/api
-```
-
-#### 3. Копирование файлов
-
-```bash
-# С локальной машины
-scp dist/index.html root@194.87.103.77:/var/www/html/results/
-scp server/api/submit.php root@194.87.103.77:/var/www/html/results/api/
-```
-
-#### 4. Создание конфигурации nginx
-
-```bash
-nano /etc/nginx/conf.d/student-tracker.conf
-```
-
-Вставьте содержимое из `server/nginx-php.conf`, заменив `fastcgi_pass` на правильный сокет PHP-FPM:
-
-```nginx
-# Найдите сокет PHP-FPM
-ls /var/run/php/
-
-# Обычно это один из:
-# unix:/var/run/php/php8.2-fpm.sock
-# unix:/var/run/php/php8.1-fpm.sock
-# unix:/var/run/php/php8.0-fpm.sock
-# unix:/var/run/php/php7.4-fpm.sock
-```
-
-#### 5. Настройка прав
-
-```bash
-chown -R www-www-data:www-data /var/www/html/results
-chmod 755 /var/www/html/results
-chmod 755 /var/www/html/results/api
-```
-
-#### 6. Проверка и перезапуск
-
-```bash
-nginx -t
-systemctl reload nginx
-```
-
-## Использование
-
-1. Откройте `http://194.87.103.77/` в браузере
-2. Введите ИД студента (или отсканируйте QR-код)
-3. Введите название активности
-4. Выберите оценку (0-5)
-5. Добавьте комментарий (опционально)
-6. Нажмите "Отправить"
-
-Данные автоматически записываются в файл `archive.csv` в директории `/var/www/html/results/`.
-
-## Формат CSV
-
-```csv
-Student ID,Activity,Grade,Comment,Date/Time
-"STU001","Лабораторная работа","5","Отличная работа","2024-01-15T10:30:00.000Z"
-"STU002","Курсовой проект","4","Хорошая работа","2024-01-15T11:00:00.000Z"
-```
-
-## Требования
-
-- Nginx
-- PHP-FPM (7.4 или выше)
-- Права на запись в директорию `/var/www/html/results/`
-
-## Проверка работы
-
-```bash
-# Проверьте, что файл создаётся
+# Проверьте что файл создаётся
 ls -la /var/www/html/results/archive.csv
 
 # Посмотрите содержимое
 cat /var/www/html/results/archive.csv
 
 # Проверьте логи nginx
-sudo tail -f /var/log/nginx/error.log
-```
-
-## Диагностика проблем
-
-### Ошибка 403 Forbidden
-
-```bash
-# Проверьте права
-ls -la /var/www/html/results/
-
-# Исправьте права
-chown -R www-www-data:www-data /var/www/html/results
-chmod -R 755 /var/www/html/results
-```
-
-### Ошибка 502 Bad Gateway
-
-```bash
-# Проверьте что PHP-FPM запущен
-systemctl status php-fpm
-
-# Если не запущен, запустите
-systemctl start php-fpm
-
-# Проверьте сокет
-ls -la /var/run/php/
-
-# Убедитесь что в nginx.conf указан правильный сокет
-grep fastcgi_pass /etc/nginx/conf.d/student-tracker.conf
-```
-
-### Ошибка 500 Internal Server Error
-
-```bash
-# Проверьте логи nginx
 tail -f /var/log/nginx/error.log
-
-# Проверьте логи PHP
-tail -f /var/log/php-fpm.log
-
-# Проверьте права на запись
-ls -la /var/www/html/results/
 ```
 
-### PHP не выполняется
+### Частые проблемы
 
+**Ошибка 502 Bad Gateway:**
 ```bash
-# Проверьте что PHP установлен
-php -v
-
-# Проверьте что PHP-FPM запущен
 systemctl status php-fpm
-
-# Проверьте конфигурацию nginx
-nginx -t
-```
-
-## Полезные команды
-
-### Просмотр логов
-```bash
-# Логи nginx
-tail -f /var/log/nginx/error.log
-
-# Логи PHP-FPM
-tail -f /var/log/php-fpm.log
-```
-
-### Просмотр файла CSV
-```bash
-# Последние 10 записей
-tail -n 10 /var/www/html/results/archive.csv
-
-# Весь файл
-cat /var/www/html/results/archive.csv
-
-# Количество записей
-wc -l /var/www/html/results/archive.csv
-```
-
-### Управление PHP-FPM
-```bash
-# Статус
-systemctl status php-fpm
-
-# Перезапуск
-systemctl restart php-fpm
-
-# Остановка
-systemctl stop php-fpm
-
-# Запуск
 systemctl start php-fpm
 ```
 
-## Обновление приложения
-
-Если вы изменили `index.html`, просто скопируйте новую версию:
-
+**Ошибка 403 Forbidden:**
 ```bash
-# С локальной машины
-scp dist/index.html root@194.87.103.77:/var/www/html/results/
+chmod 777 /var/www/html/results
+chmod 777 /var/www/html/results/api
 ```
 
-Перезапуск nginx не требуется.
-
-## Безопасность (опционально)
-
-### Ограничение доступа по IP
-
-Отредактируйте `/etc/nginx/conf.d/student-tracker.conf`:
-
-```nginx
-server {
-    listen 80;
-    server_name 194.87.103.77;
-
-    # Разрешить только с определённых IP
-    allow 192.168.1.0/24;
-    allow 10.0.0.5;
-    deny all;
-
-    # ... остальная конфигурация
-}
-```
-
-### Добавление базовой аутентификации
-
+**Ошибка 500 Internal Server Error:**
 ```bash
-# Создайте файл паролей
-htpasswd -c /etc/nginx/.htpasswd admin
-
-# Добавьте в конфигурацию nginx
-location / {
-    auth_basic "Restricted Access";
-    auth_basic_user_file /etc/nginx/.htpasswd;
-    try_files $uri $uri/ /index.html;
-}
+tail -f /var/log/nginx/error.log
+tail -f /var/log/php8.4-fpm.log
 ```
 
-## Поддержка
+## 📝 Лицензия
 
-Если возникли проблемы:
-
-1. Проверьте логи: `tail -f /var/log/nginx/error.log`
-2. Проверьте конфигурацию: `nginx -t`
-3. Убедитесь что PHP-FPM запущен: `systemctl status php-fpm`
-4. Проверьте права доступа: `ls -la /var/www/html/results/`
+MIT
