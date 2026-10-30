@@ -15,6 +15,10 @@
       justify-content: center;
       padding: 20px;
     }
+    body.embed-mode {
+      background: transparent;
+      padding: 0;
+    }
     .container {
       background: white;
       border-radius: 20px;
@@ -23,11 +27,19 @@
       width: 100%;
       box-shadow: 0 20px 60px rgba(0,0,0,0.3);
     }
+    body.embed-mode .container {
+      box-shadow: none;
+      border-radius: 0;
+      padding: 20px;
+    }
     h1 {
       color: #333;
       margin-bottom: 30px;
       text-align: center;
       font-size: 28px;
+    }
+    body.embed-mode h1 {
+      display: none;
     }
     .form-group {
       margin-bottom: 20px;
@@ -142,6 +154,9 @@
       color: #721c24;
       display: block;
     }
+    .hidden {
+      display: none !important;
+    }
   </style>
 </head>
 <body>
@@ -149,20 +164,23 @@
     <h1>📚 Student Tracker</h1>
     
     <form id="form">
-      <div class="form-group">
+      <!-- Student ID -->
+      <div class="form-group" data-field="studentId">
         <label>ИД Студента</label>
         <div class="qr-buttons">
-          <input type="text" id="studentId" placeholder="Введите или сканируйте QR" required>
-          <button type="button" class="qr-btn" onclick="scanQR()">📷</button>
+          <input type="text" id="studentId" placeholder="Введите или сканируйте QR">
+          <button type="button" class="qr-btn" onclick="StudentTracker.scanQR()">📷</button>
         </div>
       </div>
 
-      <div class="form-group">
+      <!-- Activity -->
+      <div class="form-group" data-field="activity">
         <label>Активность</label>
-        <input type="text" id="activity" placeholder="Например: Лабораторная работа" required>
+        <input type="text" id="activity" placeholder="Например: Лабораторная работа">
       </div>
 
-      <div class="form-group">
+      <!-- Grade -->
+      <div class="form-group" data-field="grade">
         <label>Оценка</label>
         <div class="grades">
           <button type="button" class="grade-btn" data-grade="5">5</button>
@@ -174,7 +192,8 @@
         </div>
       </div>
 
-      <div class="form-group">
+      <!-- Comment -->
+      <div class="form-group" data-field="comment">
         <label>Комментарий</label>
         <textarea id="comment" placeholder="Дополнительные заметки..."></textarea>
       </div>
@@ -187,95 +206,309 @@
 
   <script src="https://unpkg.com/html5-qrcode@2.3.8/html5-qrcode.min.js"></script>
   <script>
-    let selectedGrade = '';
-    const SERVER_URL = '/api/submit';
-
-    // Выбор оценки
-    document.querySelectorAll('.grade-btn').forEach(btn => {
-      btn.addEventListener('click', function() {
-        document.querySelectorAll('.grade-btn').forEach(b => b.classList.remove('active'));
-        this.classList.add('active');
-        selectedGrade = this.dataset.grade;
-      });
-    });
-
-    // QR сканирование
-    function scanQR() {
-      const html5QrCode = new Html5Qrcode("qr-reader");
-      html5QrCode.start(
-        { facingMode: "environment" },
-        { fps: 10, qrbox: { width: 250, height: 250 } },
-        (decodedText) => {
-          document.getElementById('studentId').value = decodedText;
-          html5QrCode.stop();
-          showMessage('ИД считан из QR-кода', 'success');
-        },
-        (errorMessage) => {}
-      ).catch(err => {
-        showMessage('Не удалось запустить камеру', 'error');
-      });
-    }
-
-    // Отправка формы
-    document.getElementById('form').addEventListener('submit', async (e) => {
-      e.preventDefault();
-
-      if (!selectedGrade) {
-        showMessage('Выберите оценку', 'error');
-        return;
-      }
-
-      const btn = document.getElementById('submitBtn');
-      btn.disabled = true;
-      btn.textContent = 'Отправка...';
-
-      const data = {
-        studentId: document.getElementById('studentId').value,
-        activity: document.getElementById('activity').value,
-        grade: selectedGrade,
-        comment: document.getElementById('comment').value,
-        dateTime: new Date().toISOString()
+    /**
+     * Student Tracker - Модульное приложение
+     * Поддержка интеграции через URL параметры и JavaScript API
+     */
+    const StudentTracker = (function() {
+      // Конфигурация
+      let config = {
+        fields: ['studentId', 'activity', 'grade', 'comment'],
+        mode: 'standalone', // 'standalone' | 'embed'
+        serverUrl: '/api/submit',
+        onSuccess: null,
+        onError: null,
+        defaultValues: {}
       };
 
-      // Формируем CSV строку
-      const csvLine = [
-        data.studentId,
-        data.activity,
-        data.grade,
-        data.comment,
-        data.dateTime
-      ].map(v => `"${v}"`).join(',');
+      let selectedGrade = '';
+      let html5QrCode = null;
 
-      try {
-        const response = await fetch(SERVER_URL, {
-          method: 'POST',
-          headers: { 'Content-Type': 'text/plain' },
-          body: csvLine
-        });
-
-        if (response.ok) {
-          showMessage('✓ Запись сохранена!', 'success');
-          document.getElementById('form').reset();
-          document.querySelectorAll('.grade-btn').forEach(b => b.classList.remove('active'));
-          selectedGrade = '';
-        } else {
-          showMessage('Ошибка сохранения', 'error');
-        }
-      } catch (error) {
-        showMessage('Ошибка соединения с сервером', 'error');
+      // Инициализация
+      function init() {
+        // Парсим URL параметры
+        parseUrlParams();
+        
+        // Применяем конфигурацию
+        applyConfig();
+        
+        // Устанавливаем значения по умолчанию
+        applyDefaults();
+        
+        // Привязываем события
+        bindEvents();
+        
+        console.log('Student Tracker initialized', config);
       }
 
-      btn.disabled = false;
-      btn.textContent = 'Отправить';
-    });
+      // Парсинг URL параметров
+      function parseUrlParams() {
+        const params = new URLSearchParams(window.location.search);
+        
+        // Режим
+        if (params.has('mode')) {
+          config.mode = params.get('mode');
+        }
+        
+        // Поля
+        if (params.has('fields')) {
+          config.fields = params.get('fields').split(',').map(f => f.trim());
+        }
+        
+        // Сервер
+        if (params.has('server')) {
+          config.serverUrl = params.get('server');
+        }
+        
+        // Значения по умолчанию
+        ['studentId', 'activity', 'grade', 'comment'].forEach(field => {
+          if (params.has(field)) {
+            config.defaultValues[field] = params.get(field);
+          }
+        });
+      }
 
-    function showMessage(text, type) {
-      const msg = document.getElementById('message');
-      msg.textContent = text;
-      msg.className = 'message ' + type;
-      setTimeout(() => {
-        msg.className = 'message';
-      }, 3000);
+      // Применение конфигурации
+      function applyConfig() {
+        // Режим embed
+        if (config.mode === 'embed') {
+          document.body.classList.add('embed-mode');
+        }
+        
+        // Скрыть/показать поля
+        document.querySelectorAll('[data-field]').forEach(el => {
+          const field = el.dataset.field;
+          if (config.fields.includes(field)) {
+            el.classList.remove('hidden');
+          } else {
+            el.classList.add('hidden');
+          }
+        });
+      }
+
+      // Применение значений по умолчанию
+      function applyDefaults() {
+        Object.keys(config.defaultValues).forEach(field => {
+          const value = config.defaultValues[field];
+          if (field === 'grade') {
+            setGrade(value);
+          } else {
+            const input = document.getElementById(field);
+            if (input) input.value = value;
+          }
+        });
+      }
+
+      // Привязка событий
+      function bindEvents() {
+        // Выбор оценки
+        document.querySelectorAll('.grade-btn').forEach(btn => {
+          btn.addEventListener('click', function() {
+            document.querySelectorAll('.grade-btn').forEach(b => b.classList.remove('active'));
+            this.classList.add('active');
+            selectedGrade = this.dataset.grade;
+          });
+        });
+
+        // Отправка формы
+        document.getElementById('form').addEventListener('submit', handleSubmit);
+      }
+
+      // Установка оценки программно
+      function setGrade(grade) {
+        selectedGrade = grade;
+        document.querySelectorAll('.grade-btn').forEach(b => {
+          b.classList.toggle('active', b.dataset.grade === grade);
+        });
+      }
+
+      // Установка значения поля
+      function setFieldValue(field, value) {
+        if (field === 'grade') {
+          setGrade(value);
+        } else {
+          const input = document.getElementById(field);
+          if (input) input.value = value;
+        }
+      }
+
+      // Получение значения поля
+      function getFieldValue(field) {
+        if (field === 'grade') {
+          return selectedGrade;
+        }
+        const input = document.getElementById(field);
+        return input ? input.value : '';
+      }
+
+      // QR сканирование
+      function scanQR() {
+        if (html5QrCode) {
+          html5QrCode.stop().then(() => {
+            html5QrCode = null;
+            startQRScan();
+          });
+        } else {
+          startQRScan();
+        }
+      }
+
+      function startQRScan() {
+        html5QrCode = new Html5Qrcode("qr-reader");
+        html5QrCode.start(
+          { facingMode: "environment" },
+          { fps: 10, qrbox: { width: 250, height: 250 } },
+          (decodedText) => {
+            document.getElementById('studentId').value = decodedText;
+            html5QrCode.stop();
+            html5QrCode = null;
+            showMessage('ИД считан из QR-кода', 'success');
+          },
+          (errorMessage) => {}
+        ).catch(err => {
+          showMessage('Не удалось запустить камеру', 'error');
+        });
+      }
+
+      // Отправка формы
+      async function handleSubmit(e) {
+        e.preventDefault();
+
+        // Валидация
+        if (config.fields.includes('grade') && !selectedGrade) {
+          showMessage('Выберите оценку', 'error');
+          return;
+        }
+
+        const btn = document.getElementById('submitBtn');
+        btn.disabled = true;
+        btn.textContent = 'Отправка...';
+
+        // Собираем данные
+        const data = {
+          studentId: getFieldValue('studentId'),
+          activity: getFieldValue('activity'),
+          grade: getFieldValue('grade'),
+          comment: getFieldValue('comment'),
+          dateTime: new Date().toISOString()
+        };
+
+        // Формируем CSV строку
+        const csvLine = [
+          data.studentId,
+          data.activity,
+          data.grade,
+          data.comment,
+          data.dateTime
+        ].map(v => `"${v}"`).join(',');
+
+        try {
+          const response = await fetch(config.serverUrl, {
+            method: 'POST',
+            headers: { 'Content-Type': 'text/plain' },
+            body: csvLine
+          });
+
+          if (response.ok) {
+            showMessage('✓ Запись сохранена!', 'success');
+            
+            // Вызываем callback
+            if (config.onSuccess && typeof config.onSuccess === 'function') {
+              config.onSuccess(data);
+            }
+            
+            // Отправляем событие
+            const event = new CustomEvent('studentRecordSaved', {
+              detail: { record: data, success: true },
+              bubbles: true
+            });
+            document.dispatchEvent(event);
+            
+            // PostMessage для iframe
+            if (window.parent !== window) {
+              window.parent.postMessage({
+                type: 'studentRecordSaved',
+                record: data,
+                success: true
+              }, '*');
+            }
+            
+            // Сброс формы
+            resetForm();
+          } else {
+            showMessage('Ошибка сохранения', 'error');
+            triggerError('Server error');
+          }
+        } catch (error) {
+          showMessage('Ошибка соединения с сервером', 'error');
+          triggerError(error.message);
+        }
+
+        btn.disabled = false;
+        btn.textContent = 'Отправить';
+      }
+
+      // Сброс формы
+      function resetForm() {
+        document.getElementById('form').reset();
+        document.querySelectorAll('.grade-btn').forEach(b => b.classList.remove('active'));
+        selectedGrade = '';
+        applyDefaults();
+      }
+
+      // Показать сообщение
+      function showMessage(text, type) {
+        const msg = document.getElementById('message');
+        msg.textContent = text;
+        msg.className = 'message ' + type;
+        setTimeout(() => {
+          msg.className = 'message';
+        }, 3000);
+      }
+
+      // Trigger error
+      function triggerError(message) {
+        if (config.onError && typeof config.onError === 'function') {
+          config.onError(message);
+        }
+        
+        const event = new CustomEvent('studentRecordError', {
+          detail: { message, success: false },
+          bubbles: true
+        });
+        document.dispatchEvent(event);
+        
+        if (window.parent !== window) {
+          window.parent.postMessage({
+            type: 'studentRecordError',
+            message: message,
+            success: false
+          }, '*');
+        }
+      }
+
+      // Публичный API
+      return {
+        init,
+        setFieldValue,
+        getFieldValue,
+        setGrade,
+        scanQR,
+        resetForm,
+        getConfig: () => config,
+        setConfig: (newConfig) => {
+          config = { ...config, ...newConfig };
+          applyConfig();
+          applyDefaults();
+        }
+      };
+    })();
+
+    // Автоматическая инициализация
+    if (document.readyState === 'loading') {
+      document.addEventListener('DOMContentLoaded', () => StudentTracker.init());
+    } else {
+      StudentTracker.init();
     }
   </script>
 </body>
