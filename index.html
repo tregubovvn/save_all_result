@@ -215,7 +215,8 @@
       let config = {
         fields: ['studentId', 'activity', 'grade', 'comment'],
         mode: 'standalone', // 'standalone' | 'embed'
-        serverUrl: '/api/submit',
+        supabaseUrl: 'https://nfoynqfjkvgtqsgwxves.supabase.co',
+        supabaseKey: '', // Нужно указать anon key из Supabase
         onSuccess: null,
         onError: null,
         defaultValues: {}
@@ -255,9 +256,14 @@
           config.fields = params.get('fields').split(',').map(f => f.trim());
         }
         
-        // Сервер
-        if (params.has('server')) {
-          config.serverUrl = params.get('server');
+        // Supabase URL
+        if (params.has('supabaseUrl')) {
+          config.supabaseUrl = params.get('supabaseUrl');
+        }
+        
+        // Supabase Key
+        if (params.has('supabaseKey')) {
+          config.supabaseKey = params.get('supabaseKey');
         }
         
         // Значения по умолчанию
@@ -386,30 +392,27 @@
 
         // Собираем данные
         const data = {
-          studentId: getFieldValue('studentId'),
+          student_id: getFieldValue('studentId'),
           activity: getFieldValue('activity'),
           grade: getFieldValue('grade'),
           comment: getFieldValue('comment'),
-          dateTime: new Date().toISOString()
+          date_time: new Date().toISOString()
         };
 
-        // Формируем CSV строку
-        const csvLine = [
-          data.studentId,
-          data.activity,
-          data.grade,
-          data.comment,
-          data.dateTime
-        ].map(v => `"${v}"`).join(',');
-
         try {
-          const response = await fetch(config.serverUrl, {
+          // Отправка в Supabase
+          const response = await fetch(`${config.supabaseUrl}/rest/v1/records`, {
             method: 'POST',
-            headers: { 'Content-Type': 'text/plain' },
-            body: csvLine
+            headers: {
+              'Content-Type': 'application/json',
+              'apikey': config.supabaseKey,
+              'Authorization': `Bearer ${config.supabaseKey}`,
+              'Prefer': 'return=minimal'
+            },
+            body: JSON.stringify(data)
           });
 
-          if (response.ok) {
+          if (response.ok || response.status === 201) {
             showMessage('✓ Запись сохранена!', 'success');
             
             // Вызываем callback
@@ -436,11 +439,12 @@
             // Сброс формы
             resetForm();
           } else {
-            showMessage('Ошибка сохранения', 'error');
-            triggerError('Server error');
+            const errorText = await response.text();
+            showMessage('Ошибка сохранения: ' + errorText, 'error');
+            triggerError('Server error: ' + errorText);
           }
         } catch (error) {
-          showMessage('Ошибка соединения с сервером', 'error');
+          showMessage('Ошибка соединения с Supabase', 'error');
           triggerError(error.message);
         }
 
