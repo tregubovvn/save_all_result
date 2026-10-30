@@ -239,6 +239,15 @@
         // Привязываем события
         bindEvents();
         
+        // Проверяем что ключ установлен
+        if (!config.supabaseKey) {
+          console.warn('⚠️ Supabase API ключ не установлен!');
+          console.warn('Укажите ключ через URL параметр: ?supabaseKey=YOUR_KEY');
+          console.warn('Или через setConfig(): StudentTracker.setConfig({supabaseKey: "YOUR_KEY"})');
+        } else {
+          console.log('✓ Supabase API ключ установлен');
+        }
+        
         console.log('Student Tracker initialized', config);
       }
 
@@ -400,6 +409,17 @@
         };
 
         try {
+          // Проверка что ключ установлен
+          if (!config.supabaseKey) {
+            throw new Error('Supabase API ключ не установлен');
+          }
+
+          console.log('Отправка в Supabase:', {
+            url: `${config.supabaseUrl}/rest/v1/records`,
+            hasKey: !!config.supabaseKey,
+            keyLength: config.supabaseKey.length
+          });
+
           // Отправка в Supabase
           const response = await fetch(`${config.supabaseUrl}/rest/v1/records`, {
             method: 'POST',
@@ -440,6 +460,11 @@
             resetForm();
           } else {
             const errorText = await response.text();
+            console.error('Ошибка Supabase:', {
+              status: response.status,
+              statusText: response.statusText,
+              error: errorText
+            });
             showMessage('Ошибка сохранения: ' + errorText, 'error');
             triggerError('Server error: ' + errorText);
           }
@@ -501,7 +526,9 @@
         resetForm,
         getConfig: () => config,
         setConfig: (newConfig) => {
+          console.log('Обновление конфигурации:', newConfig);
           config = { ...config, ...newConfig };
+          console.log('Новая конфигурация:', config);
           applyConfig();
           applyDefaults();
         }
