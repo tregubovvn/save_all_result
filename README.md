@@ -1,43 +1,45 @@
 # Student Tracker
 
-Простое приложение для записи оценок студентов в CSV файл. Работает с nginx + PHP-FPM.
+Приложение для записи оценок студентов. Работает с Supabase (облачная база данных).
 
 ## 🚀 Быстрый старт
 
-### Установка на сервер
+### 1. Настройка Supabase
 
-```bash
-# 1. Установите nginx и PHP-FPM
-apt-get update
-apt-get install -y nginx php-fpm
+Следуйте инструкции в файле `SUPABASE_SETUP.md`:
 
-# 2. Создайте директорию
-mkdir -p /var/www/html/results/api
+1. Создайте таблицу `records` в Supabase
+2. Получите `anon key`
+3. Укажите его в коде или через URL параметры
 
-# 3. Скопируйте файлы
-cp dist/index.html /var/www/html/results/
-cp server/api/submit.php /var/www/html/results/api/
+### 2. Использование
 
-# 4. Создайте конфигурацию nginx
-cp server/nginx-php.conf /etc/nginx/conf.d/student-tracker.conf
+Откройте приложение с параметрами:
 
-# 5. Найдите сокет PHP-FPM
-ls /var/run/php/
-# Отредактируйте fastcgi_pass в конфигурации
-
-# 6. Настройте права
-chmod 777 /var/www/html/results
-chmod 777 /var/www/html/results/api
-
-# 7. Перезапустите nginx
-nginx -t && systemctl reload nginx
+```
+index.html?supabaseUrl=https://nfoynqfjkvgtqsgwxves.supabase.co&supabaseKey=YOUR_ANON_KEY
 ```
 
-### Использование
+Или настройте в коде `index.html`:
 
-1. Откройте `http://194.87.103.77/` в браузере
-2. Заполните форму и нажмите "Отправить"
-3. Данные сохраняются в `/var/www/html/results/archive.csv`
+```javascript
+supabaseUrl: 'https://nfoynqfjkvgtqsgwxves.supabase.co',
+supabaseKey: 'YOUR_ANON_KEY',
+```
+
+### 3. Развертывание
+
+**GitHub Pages** (рекомендуется):
+```bash
+npm run build
+# Загрузите dist/index.html на GitHub Pages
+```
+
+**Любой статический хостинг**:
+```bash
+npm run build
+# Загрузите содержимое dist/ на хостинг
+```
 
 ## 🔌 Интеграция в другие приложения
 
