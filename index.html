@@ -238,6 +238,9 @@
         
         // Привязываем события
         bindEvents();
+
+        // Автоотправка из URL (для интеграций: autoSubmit=1)
+        handleAutoSubmit(new URLSearchParams(window.location.search));
         
         // Проверяем что ключ установлен
         if (!config.supabaseKey) {
@@ -617,6 +620,83 @@
         messageDiv.parentNode.insertBefore(button, messageDiv.nextSibling);
       }
 
+      // Автозаполнение и отправка из URL (интеграция внешних приложений)
+      // Пример: index.html?mode=embed&fields=studentId&autoSubmit=1
+      //          &studentId=2411234&activity=RE:AD%20%E2%80%94%20%D0%A2%D0%B5%D0%BC%D0%B0&grade=5&comment=...
+      function handleAutoSubmit(params) {
+        if (!params || params.get('autoSubmit') !== '1') return;
+
+        ['studentId', 'activity', 'comment'].forEach(field => {
+          if (params.has(field)) {
+            const input = document.getElementById(field);
+            if (input) input.value = params.get(field);
+          }
+        });
+
+        if (params.has('grade')) {
+          setGrade(params.get('grade'));
+        }
+
+        // Даём форме отрисоваться, затем отправляем
+        setTimeout(() => {
+          document.getElementById('form').requestSubmit();
+        }, 300);
+      }
+
+      // Сохранение записи напрямую в Supabase (для внешних приложений,
+      // не имеющих доступа к DOM этой формы). Тот же эндпоинт и формат,
+      // что использует handleSubmit(). Ограничение 10 минут проверяется.
+      async function saveRecord(data) {
+        if (!data || !data.studentId) return { success: false, message: 'Не указан studentId' };
+        if (!data.activity) return { success: false, message: 'Не указана activity' };
+        if (data.grade === undefined || data.grade === null || data.grade === '') {
+          return { success: false, message: 'Не указана grade' };
+        }
+        if (!config.supabaseKey) return { success: false, message: 'Supabase API ключ не установлен' };
+
+        const record = {
+          student_id: String(data.studentId),
+          activity: String(data.activity),
+          grade: String(data.grade),
+          comment: data.comment ? String(data.comment) : '',
+          date_time: new Date().toISOString()
+        };
+
+        const timeCheck = await checkTimeLimit(record.student_id);
+        if (!timeCheck.allowed) return { success: false, message: timeCheck.message };
+
+        try {
+          const url = `${config.supabaseUrl}/rest/v1/records?apikey=${encodeURIComponent(config.supabaseKey)}`;
+          const response = await fetch(url, {
+            method: 'POST',
+            headers: {
+              'Content-Type': 'application/json',
+              'apikey': config.supabaseKey,
+              'Authorization': `Bearer ${config.supabaseKey}`,
+              'Prefer': 'return=minimal'
+            },
+            body: JSON.stringify(record)
+          });
+
+          if (response.ok || response.status === 201) {
+            const event = new CustomEvent('studentRecordSaved', { detail: { record, success: true }, bubbles: true });
+            document.dispatchEvent(event);
+            if (window.parent !== window) {
+              window.parent.postMessage({ type: 'studentRecordSaved', record, success: true }, '*');
+            }
+            if (config.onSuccess) config.onSuccess(record);
+            return { success: true, message: 'Запись сохранена', record };
+          }
+          const errText = await response.text();
+          return { success: false, message: 'Ошибка сервера: ' + errText };
+        } catch (error) {
+          return { success: false, message: error.message };
+        }
+      }
+
+      // Глобальный экспорт для внешних интеграций (см. public/api.js)
+      window.StudentAPI = { save: saveRecord };
+
       // Публичный API
       return {
         init,
@@ -624,6 +704,7 @@
         getFieldValue,
         setGrade,
         scanQR,
+        saveRecord,
         resetForm,
         getConfig: () => config,
         setConfig: (newConfig) => {
