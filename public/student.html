@@ -1,0 +1,354 @@
+<!DOCTYPE html>
+<html lang="ru">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>Результаты студента</title>
+  <style>
+    * { margin: 0; padding: 0; box-sizing: border-box; }
+    body {
+      font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, sans-serif;
+      background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
+      min-height: 100vh;
+      padding: 20px;
+    }
+    .container {
+      max-width: 800px;
+      margin: 0 auto;
+    }
+    .header {
+      background: white;
+      border-radius: 16px;
+      padding: 24px;
+      margin-bottom: 20px;
+      box-shadow: 0 10px 40px rgba(0,0,0,0.2);
+    }
+    .header h1 {
+      color: #333;
+      font-size: 24px;
+      margin-bottom: 8px;
+      display: flex;
+      align-items: center;
+      gap: 12px;
+    }
+    .student-id {
+      background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
+      color: white;
+      padding: 8px 16px;
+      border-radius: 8px;
+      font-family: 'Courier New', monospace;
+      font-size: 18px;
+      font-weight: 600;
+    }
+    .stats {
+      display: grid;
+      grid-template-columns: repeat(auto-fit, minmax(120px, 1fr));
+      gap: 12px;
+      margin-top: 16px;
+    }
+    .stat-card {
+      background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
+      color: white;
+      padding: 16px;
+      border-radius: 12px;
+      text-align: center;
+    }
+    .stat-value {
+      font-size: 28px;
+      font-weight: 700;
+      margin-bottom: 4px;
+    }
+    .stat-label {
+      font-size: 12px;
+      opacity: 0.9;
+    }
+    .records-list {
+      display: flex;
+      flex-direction: column;
+      gap: 16px;
+    }
+    .record-card {
+      background: white;
+      border-radius: 16px;
+      padding: 20px;
+      box-shadow: 0 5px 20px rgba(0,0,0,0.1);
+      transition: transform 0.2s;
+    }
+    .record-card:hover {
+      transform: translateY(-2px);
+      box-shadow: 0 8px 30px rgba(0,0,0,0.15);
+    }
+    .record-header {
+      display: flex;
+      justify-content: space-between;
+      align-items: flex-start;
+      margin-bottom: 12px;
+      flex-wrap: wrap;
+      gap: 8px;
+    }
+    .record-date {
+      color: #666;
+      font-size: 14px;
+      display: flex;
+      align-items: center;
+      gap: 6px;
+    }
+    .grade-badge {
+      display: inline-block;
+      padding: 6px 16px;
+      border-radius: 20px;
+      font-weight: 700;
+      font-size: 18px;
+    }
+    .grade-5 { background: #d4edda; color: #155724; }
+    .grade-4 { background: #cce5ff; color: #004085; }
+    .grade-3 { background: #fff3cd; color: #856404; }
+    .grade-2 { background: #f8d7da; color: #721c24; }
+    .grade-1 { background: #f8d7da; color: #721c24; }
+    .grade-0 { background: #f8d7da; color: #721c24; }
+    .record-activity {
+      font-size: 18px;
+      font-weight: 600;
+      color: #333;
+      margin-bottom: 8px;
+    }
+    .record-comment {
+      color: #666;
+      font-size: 14px;
+      line-height: 1.5;
+      padding: 12px;
+      background: #f8f9fa;
+      border-radius: 8px;
+      margin-top: 12px;
+    }
+    .loading {
+      text-align: center;
+      padding: 60px 20px;
+      color: white;
+    }
+    .loading i {
+      font-size: 48px;
+      margin-bottom: 16px;
+      animation: spin 1s linear infinite;
+    }
+    @keyframes spin {
+      from { transform: rotate(0deg); }
+      to { transform: rotate(360deg); }
+    }
+    .empty {
+      text-align: center;
+      padding: 60px 20px;
+      background: white;
+      border-radius: 16px;
+      box-shadow: 0 5px 20px rgba(0,0,0,0.1);
+    }
+    .empty i {
+      font-size: 64px;
+      color: #ccc;
+      margin-bottom: 16px;
+    }
+    .empty h3 {
+      color: #333;
+      margin-bottom: 8px;
+    }
+    .empty p {
+      color: #666;
+    }
+    .error {
+      background: #f8d7da;
+      color: #721c24;
+      padding: 20px;
+      border-radius: 12px;
+      text-align: center;
+    }
+    @media (max-width: 600px) {
+      body {
+        padding: 12px;
+      }
+      .header {
+        padding: 16px;
+      }
+      .header h1 {
+        font-size: 20px;
+        flex-direction: column;
+        align-items: flex-start;
+      }
+      .record-card {
+        padding: 16px;
+      }
+      .record-activity {
+        font-size: 16px;
+      }
+      .grade-badge {
+        font-size: 16px;
+        padding: 4px 12px;
+      }
+    }
+  </style>
+  <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.4.0/css/all.min.css" />
+</head>
+<body>
+  <div class="container">
+    <div class="header">
+      <h1>
+        <i class="fas fa-user-graduate"></i>
+        <span>Результаты студента</span>
+      </h1>
+      <div class="student-id" id="studentId">Загрузка...</div>
+      <div class="stats" id="stats"></div>
+    </div>
+
+    <div id="content">
+      <div class="loading">
+        <i class="fas fa-spinner"></i>
+        <p>Загрузка данных...</p>
+      </div>
+    </div>
+  </div>
+
+  <script>
+    const SUPABASE_URL = 'https://nfoynqfjkvgtqsgwxves.supabase.co';
+    const SUPABASE_KEY = 'eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6Im5mb3lucWZqa3ZndHFzZ3d4dmVzIiwicm9sZSI6ImFub24iLCJpYXQiOjE3OTMzNzc3NDUsImV4cCI6MjEwODk1Mzc0NX0.SR2krMy390zOPeVwUjdBAhufwcj57Kk8VQXqFBu3Fdo';
+
+    // Получаем ID студента из URL
+    const urlParams = new URLSearchParams(window.location.search);
+    const studentId = urlParams.get('id');
+
+    if (!studentId) {
+      document.getElementById('content').innerHTML = `
+        <div class="error">
+          <i class="fas fa-exclamation-triangle"></i>
+          <h3>Ошибка</h3>
+          <p>Не указан ID студента в URL</p>
+          <p style="margin-top: 8px; font-size: 14px;">Пример: ?id=STU001</p>
+        </div>
+      `;
+    } else {
+      document.getElementById('studentId').textContent = studentId;
+      loadStudentRecords();
+    }
+
+    async function loadStudentRecords() {
+      try {
+        const url = `${SUPABASE_URL}/rest/v1/records?student_id=eq.${encodeURIComponent(studentId)}&order=date_time.desc&apikey=${encodeURIComponent(SUPABASE_KEY)}`;
+        
+        const response = await fetch(url, {
+          headers: {
+            'apikey': SUPABASE_KEY,
+            'Authorization': `Bearer ${SUPABASE_KEY}`
+          }
+        });
+
+        if (!response.ok) {
+          throw new Error('Ошибка загрузки данных');
+        }
+
+        const records = await response.json();
+        renderRecords(records);
+      } catch (error) {
+        document.getElementById('content').innerHTML = `
+          <div class="error">
+            <i class="fas fa-exclamation-triangle"></i>
+            <h3>Ошибка загрузки</h3>
+            <p>${error.message}</p>
+          </div>
+        `;
+      }
+    }
+
+    function renderRecords(records) {
+      if (records.length === 0) {
+        document.getElementById('content').innerHTML = `
+          <div class="empty">
+            <i class="fas fa-inbox"></i>
+            <h3>Нет записей</h3>
+            <p>Для этого студента пока нет результатов</p>
+          </div>
+        `;
+        return;
+      }
+
+      // Статистика
+      const stats = calculateStats(records);
+      document.getElementById('stats').innerHTML = `
+        <div class="stat-card">
+          <div class="stat-value">${stats.total}</div>
+          <div class="stat-label">Записей</div>
+        </div>
+        <div class="stat-card">
+          <div class="stat-value">${stats.avgGrade}</div>
+          <div class="stat-label">Средняя оценка</div>
+        </div>
+        <div class="stat-card">
+          <div class="stat-value">${stats.activities}</div>
+          <div class="stat-label">Активностей</div>
+        </div>
+      `;
+
+      // Список записей
+      const recordsList = records.map(r => `
+        <div class="record-card">
+          <div class="record-header">
+            <div class="record-date">
+              <i class="fas fa-calendar"></i>
+              ${formatDateTime(r.date_time)}
+            </div>
+            <span class="grade-badge grade-${r.grade}">${r.grade}</span>
+          </div>
+          <div class="record-activity">
+            <i class="fas fa-book"></i> ${escapeHtml(r.activity)}
+          </div>
+          ${r.comment ? `<div class="record-comment"><i class="fas fa-comment"></i> ${escapeHtml(r.comment)}</div>` : ''}
+        </div>
+      `).join('');
+
+      document.getElementById('content').innerHTML = `
+        <div class="records-list">
+          ${recordsList}
+        </div>
+      `;
+    }
+
+    function calculateStats(records) {
+      const total = records.length;
+      const activities = new Set(records.map(r => r.activity)).size;
+      
+      const grades = records.map(r => parseInt(r.grade)).filter(g => !isNaN(g));
+      const avgGrade = grades.length > 0 
+        ? (grades.reduce((a, b) => a + b, 0) / grades.length).toFixed(2)
+        : '0';
+
+      return { total, activities, avgGrade };
+    }
+
+    function formatDateTime(dateString) {
+      const date = new Date(dateString);
+      const now = new Date();
+      const diffMs = now - date;
+      const diffDays = Math.floor(diffMs / (1000 * 60 * 60 * 24));
+
+      if (diffDays === 0) {
+        return 'Сегодня, ' + date.toLocaleTimeString('ru-RU', {hour: '2-digit', minute: '2-digit'});
+      } else if (diffDays === 1) {
+        return 'Вчера, ' + date.toLocaleTimeString('ru-RU', {hour: '2-digit', minute: '2-digit'});
+      } else if (diffDays < 7) {
+        return `${diffDays} дн. назад`;
+      } else {
+        return date.toLocaleDateString('ru-RU', {
+          day: '2-digit',
+          month: 'long',
+          year: 'numeric',
+          hour: '2-digit',
+          minute: '2-digit'
+        });
+      }
+    }
+
+    function escapeHtml(text) {
+      const div = document.createElement('div');
+      div.textContent = text || '';
+      return div.innerHTML;
+    }
+  </script>
+</body>
+</html>
