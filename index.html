@@ -491,6 +491,9 @@
           if (response.ok || response.status === 201) {
             showMessage('✓ Запись сохранена!', 'success');
             
+            // Показываем кнопку просмотра результатов
+            showViewResultsButton(data.student_id);
+            
             // Вызываем callback
             if (config.onSuccess && typeof config.onSuccess === 'function') {
               config.onSuccess(data);
@@ -570,6 +573,48 @@
             success: false
           }, '*');
         }
+      }
+
+      // Показать кнопку просмотра результатов
+      function showViewResultsButton(studentId) {
+        // Удаляем старую кнопку если есть
+        const oldButton = document.getElementById('viewResultsBtn');
+        if (oldButton) oldButton.remove();
+
+        // Создаём новую кнопку
+        const button = document.createElement('a');
+        button.id = 'viewResultsBtn';
+        button.href = `student.html?id=${encodeURIComponent(studentId)}`;
+        button.className = 'view-results-btn';
+        button.innerHTML = '<i class="fas fa-eye"></i> Просмотр всех сохранённых результатов';
+        button.style.cssText = `
+          display: block;
+          margin-top: 15px;
+          padding: 14px 20px;
+          background: linear-gradient(135deg, #28a745 0%, #20c997 100%);
+          color: white;
+          text-decoration: none;
+          border-radius: 10px;
+          font-size: 16px;
+          font-weight: 600;
+          text-align: center;
+          transition: all 0.3s;
+          box-shadow: 0 4px 15px rgba(40, 167, 69, 0.3);
+        `;
+        
+        button.addEventListener('mouseenter', function() {
+          this.style.transform = 'translateY(-2px)';
+          this.style.boxShadow = '0 6px 20px rgba(40, 167, 69, 0.4)';
+        });
+        
+        button.addEventListener('mouseleave', function() {
+          this.style.transform = 'translateY(0)';
+          this.style.boxShadow = '0 4px 15px rgba(40, 167, 69, 0.3)';
+        });
+
+        // Добавляем кнопку после сообщения
+        const messageDiv = document.getElementById('message');
+        messageDiv.parentNode.insertBefore(button, messageDiv.nextSibling);
       }
 
       // Публичный API
